@@ -5,6 +5,7 @@ import type { FirstAccessUseCase } from './first-access.use-case.js'
 import type { LoginUseCase } from './login.use-case.js'
 import type { LogoutUseCase } from './logout.use-case.js'
 import { requireAuth } from './middleware.js'
+import type { PasswordResetUseCase } from './password-reset.use-case.js'
 import { rateLimit } from './rate-limit.js'
 import type { RefreshUseCase } from './refresh.use-case.js'
 import type { TokenService } from './tokens.js'
@@ -14,6 +15,7 @@ export type AuthDeps = {
   login: LoginUseCase
   refresh: RefreshUseCase
   logout: LogoutUseCase
+  passwordReset: PasswordResetUseCase
   tokens: TokenService
 }
 
@@ -30,6 +32,16 @@ const loginSchema = z.object({
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
+})
+
+const resetRequestSchema = z.object({
+  cpf: z.string().min(11).max(14),
+  email: z.email(),
+})
+
+const resetConfirmSchema = z.object({
+  code: z.string().min(4).max(32),
+  password: z.string().min(1),
 })
 
 /** Códigos de erro que viram 401 em vez de 400. */
@@ -75,6 +87,30 @@ export function createAuthRouter(deps: AuthDeps): Router {
       return
     }
     responder(res, await deps.login.executeAgent(parsed.data))
+  })
+
+  /**
+   * Pedido de recuperação. Responde igual exista ou não a conta.
+   *
+   * O limite de tentativas importa mais aqui do que no login: e o que impede
+   * varrer CPFs e, do outro lado, chutar codigos de oito caracteres.
+   */
+  router.post('/password-reset', limiteTentativas, async (req: Request, res: Response) => {
+    const parsed = resetRequestSchema.safeParse(req.body)
+    if (!parsed.success) {
+      responder(res, err('PAYLOAD_INVALIDO', 'Informe CPF e e-mail.'))
+      return
+    }
+    responder(res, await deps.passwordReset.request(parsed.data))
+  })
+
+  router.post('/password-reset/confirm', limiteTentativas, async (req: Request, res: Response) => {
+    const parsed = resetConfirmSchema.safeParse(req.body)
+    if (!parsed.success) {
+      responder(res, err('PAYLOAD_INVALIDO', 'Informe o código e a nova senha.'))
+      return
+    }
+    responder(res, await deps.passwordReset.confirm(parsed.data))
   })
 
   router.post('/refresh', async (req: Request, res: Response) => {

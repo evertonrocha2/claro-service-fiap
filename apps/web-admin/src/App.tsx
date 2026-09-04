@@ -10,6 +10,7 @@ import {
   type Metrics,
   type QueueItem,
 } from './api.js'
+import { useTicketRoute } from './route.js'
 import { AgentLogin } from './screens/AgentLogin.js'
 import { Board } from './screens/Board.js'
 import { Detail, EmptyDetail } from './screens/Detail.js'
@@ -24,6 +25,7 @@ import { History } from './screens/History.js'
 import { MyDashboard } from './screens/MyDashboard.js'
 import { Team } from './screens/Performance.js'
 import { Pulse } from './screens/Pulse.js'
+import { TicketPage } from './screens/TicketPage.js'
 import { useAgentSession } from './useAgentSession.js'
 
 /**
@@ -44,6 +46,7 @@ const INTERVALO_MS = 5000
 
 export function App() {
   const { sessao, entrar, sair } = useAgentSession()
+  const atendimentoNaRota = useTicketRoute()
   const [aba, setAba] = useState<Aba>('fila')
   const [fila, setFila] = useState<QueueItem[]>([])
   const [encerrados, setEncerrados] = useState<QueueItem[]>([])
@@ -164,6 +167,13 @@ export function App() {
 
   if (!sessao || !token) {
     return <AgentLogin onEntrar={entrar} />
+  }
+
+  // A aba aberta num atendimento especifico nao monta o console inteiro: a fila
+  // atras dela continua atualizando na outra aba, e duas copias buscando a
+  // mesma lista a cada cinco segundos e desperdicio.
+  if (atendimentoNaRota) {
+    return <TicketPage session={sessao} conversationId={atendimentoNaRota} onSignOut={sair} />
   }
 
   async function aposMudanca() {

@@ -18,6 +18,8 @@ export interface IRefreshTokenRepository {
   findAny(token: string): Promise<RefreshToken | null>
   markUsed(id: string): Promise<void>
   revokeFamily(familyId: string): Promise<void>
+  /** Derruba todas as sessões de alguem. Usado na troca de senha. */
+  revokeAllForSubject(subjectId: string, subjectKind: 'CUSTOMER' | 'AGENT'): Promise<void>
 }
 
 export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
@@ -67,6 +69,13 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   async revokeFamily(familyId: string): Promise<void> {
     await this.db.refreshToken.updateMany({
       where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    })
+  }
+
+  async revokeAllForSubject(subjectId: string, subjectKind: 'CUSTOMER' | 'AGENT'): Promise<void> {
+    await this.db.refreshToken.updateMany({
+      where: { subjectId, subjectKind, revokedAt: null },
       data: { revokedAt: new Date() },
     })
   }

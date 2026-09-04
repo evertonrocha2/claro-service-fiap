@@ -1,4 +1,6 @@
+import { ExternalLink } from 'lucide-react'
 import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
+import { ticketHref } from '../route.js'
 
 export type BoardProps = {
   items: QueueItem[]
@@ -21,7 +23,12 @@ function Card({
   const urgente = item.waitingSeconds >= URGENTE_SEGUNDOS
 
   return (
-    <button type="button" className="card" aria-current={selected} onClick={onSelect}>
+    /* O cartão guarda dois destinos, e por isso deixou de ser um botão só.
+       Clicar abre a prévia aqui do lado, que é o gesto de triagem. O ícone abre o
+       atendimento inteiro em outra aba, para trabalhar sem perder a fila de
+       vista. Um link dentro de um botão seria HTML inválido, então os dois são
+       irmãos dentro do cartão. */
+    <article className={`card ${selected ? 'is-selected' : ''}`}>
       {/* A barra cresce com a espera e vira vermelha ao passar de cinco minutos. */}
       <span
         className={`card__spine ${urgente ? 'card__spine--urgent' : ''}`}
@@ -29,30 +36,43 @@ function Card({
         aria-hidden="true"
       />
 
-      <div className={`card__who ${item.customerName ? '' : 'card__who--unknown'}`}>
-        {item.customerName ?? 'Não identificado'}
-      </div>
+      <a
+        className="card__expand"
+        href={ticketHref(item.id)}
+        target="_blank"
+        rel="noopener"
+        title="Abrir o atendimento em outra aba"
+        aria-label={`Abrir o atendimento de ${item.customerName ?? 'cliente não identificado'} em outra aba`}
+      >
+        <ExternalLink size={13} strokeWidth={2.2} aria-hidden="true" />
+      </a>
 
-      <div className="card__meta">
-        <span className={urgente ? 'card__wait--urgent' : undefined}>
-          {formatWait(item.waitingSeconds)}
-        </span>
-        <span aria-hidden="true">·</span>
-        <span>{CHANNEL_LABELS[item.channel]}</span>
-        {item.originChannel !== item.channel && (
-          <>
-            <span aria-hidden="true">·</span>
-            <span title="Atendimento iniciado em outro canal">
-              origem {CHANNEL_LABELS[item.originChannel]}
-            </span>
-          </>
-        )}
-      </div>
+      <button type="button" className="card__pick" aria-current={selected} onClick={onSelect}>
+        <div className={`card__who ${item.customerName ? '' : 'card__who--unknown'}`}>
+          {item.customerName ?? 'Não identificado'}
+        </div>
 
-      {item.lastMessage && <p className="card__last">{item.lastMessage}</p>}
+        <div className="card__meta">
+          <span className={urgente ? 'card__wait--urgent' : undefined}>
+            {formatWait(item.waitingSeconds)}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>{CHANNEL_LABELS[item.channel]}</span>
+          {item.originChannel !== item.channel && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span title="Atendimento iniciado em outro canal">
+                origem {CHANNEL_LABELS[item.originChannel]}
+              </span>
+            </>
+          )}
+        </div>
 
-      {item.assignedAgentName && <div className="card__agent">{item.assignedAgentName}</div>}
-    </button>
+        {item.lastMessage && <p className="card__last">{item.lastMessage}</p>}
+
+        {item.assignedAgentName && <div className="card__agent">{item.assignedAgentName}</div>}
+      </button>
+    </article>
   )
 }
 

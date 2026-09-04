@@ -501,25 +501,68 @@ button {
 
 .card {
   position: relative;
-  width: 100%;
-  text-align: left;
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
   border-radius: 8px;
-  padding: 11px 12px;
-  color: inherit;
   overflow: hidden;
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease;
 }
 
+/* A superficie de escolha. O padding vive aqui e nao no cartao para o botao
+   cobrir a area toda, senao havia uma borda morta em volta que nao selecionava. */
+.card__pick {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 11px 12px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Fica acima do botao irmao, no canto, e visivel sempre.
+   Comecou aparecendo so no hover para nao poluir a coluna, e isso repetia um
+   problema ja apontado nesta tela: caminho escondido e caminho que ninguem
+   acha. Discreto resolve o ruido sem esconder a saida. */
+.card__expand {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-muted);
+  opacity: 0.5;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease;
+}
+
+.card:hover .card__expand,
+.card__expand:focus-visible {
+  opacity: 1;
+}
+
+.card__expand:hover {
+  color: var(--claro-red);
+  border-color: var(--claro-red);
+}
+
 .card:hover {
   box-shadow: 0 1px 4px rgb(26 29 33 / 0.09);
 }
 
-.card[aria-current='true'] {
+.card.is-selected {
   border-color: var(--claro-red);
   box-shadow: 0 0 0 1px var(--claro-red);
 }
@@ -634,8 +677,38 @@ button {
 }
 
 .detail__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--line);
+}
+
+.detail__headtext {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail__expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.detail__expand:hover {
+  color: var(--claro-red);
+  border-color: var(--claro-red);
 }
 
 .detail__title {
@@ -781,7 +854,10 @@ button {
   background: var(--panel);
 }
 
-.detail__actions textarea {
+/* Vale nas duas telas. Presa ao painel lateral, a pagina inteira ficava com um
+   textarea sem estilo nenhum, apertado num canto. */
+.detail__actions textarea,
+.ticket__actions textarea {
   width: 100%;
   resize: none;
   font: inherit;
@@ -794,7 +870,8 @@ button {
   max-height: 110px;
 }
 
-.detail__actions textarea:focus-visible {
+.detail__actions textarea:focus-visible,
+.ticket__actions textarea:focus-visible {
   outline: none;
   border-color: var(--claro-red);
   background: var(--panel);
@@ -1492,5 +1569,236 @@ button {
   .team__row {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+}
+
+
+/* ---------- pagina inteira do atendimento ---------- */
+
+.shell--ticket {
+  background: var(--bg);
+}
+
+.ticket__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.ticket__back:hover {
+  color: var(--claro-red);
+  border-color: var(--claro-red);
+}
+
+/* O cabecalho da oferta quebra em vez de espremer no trilho estreito. */
+.offer__head {
+  flex-wrap: wrap;
+}
+
+.ticket__loading {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.ticket {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ticket__head {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.ticket__id {
+  min-width: 200px;
+}
+
+.ticket__who {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.ticket__protocol {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 3px 0 0;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.ticket__stats {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.ticket__stat dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ticket__stat dd {
+  margin: 3px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ticket__stat--mono {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket__body {
+  display: grid;
+  /* A conversa manda. A coluna de dados tem largura fixa porque ela e consulta,
+     nao trabalho, e deixa-la crescer roubava o espaco de quem le. */
+  grid-template-columns: minmax(0, 1fr) 340px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ticket__talk {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+
+/* Coluna de leitura, nao a largura da janela.
+   Solto num monitor largo, o balao do cliente ficava numa borda e o da Sync na
+   outra, e acompanhar a conversa virava exercicio de virar a cabeca.
+   O centro sai do padding, e nao de margin auto nos filhos: margin auto anula o
+   align-self de cada balao e joga todos para o meio, perdendo o lado de quem
+   falou. */
+.ticket__thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px max(26px, calc((100% - 900px) / 2));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket__thread .msg {
+  max-width: 620px;
+}
+
+/* O compositor acompanha a mesma coluna de leitura. */
+.ticket__actions {
+  padding: 14px max(26px, calc((100% - 900px) / 2)) 18px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* E os botoes param de esticar de ponta a ponta, o que fazia sentido na coluna
+   estreita da previa e nenhum aqui. */
+.ticket__actions .btn--row .btn {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.ticket__rail {
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ticket__railtitle {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ticket__facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.ticket__facts li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: baseline;
+  gap: 0 9px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ticket__facts li:last-child {
+  border-bottom: none;
+}
+
+.ticket__facts svg {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--ink-muted);
+}
+
+.ticket__facts span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.ticket__facts strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ticket__mono {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1000px) {
+  .ticket__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket__talk {
+    border-right: none;
   }
 }

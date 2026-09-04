@@ -69,8 +69,27 @@ model Customer {
   invoices      Invoice[]
   conversations Conversation[]
   offerInsights OfferInsight[]
+  resetTokens   PasswordResetToken[]
 
   createdAt DateTime @default(now())
+}
+
+/// Recuperacao de senha.
+///
+/// Guarda apenas o hash do codigo, pela mesma razao do RefreshToken: vazar o
+/// banco nao deve entregar codigos utilizaveis. Uso unico e prazo curto, porque
+/// um codigo vivo vale uma conta.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  customerId String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
 }
 
 model Service {

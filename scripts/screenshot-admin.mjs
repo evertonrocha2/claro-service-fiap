@@ -95,11 +95,14 @@ const CLICAR = (texto, seletor = 'button') => `
   return true
 })()`
 
+// O cartao virou article para caber o link da pagina inteira ao lado do botao.
+// Clicar no article nao seleciona nada: a superficie de escolha e o botao.
 const CLICAR_PRIMEIRO_CARD = `
 (() => {
   const card = document.querySelector('.card')
   if (!card) throw new Error('quadro vazio')
-  card.click()
+  const pick = card.querySelector('.card__pick') ?? card
+  pick.click()
   return card.textContent.trim().slice(0, 40)
 })()`
 
@@ -185,6 +188,29 @@ async function main() {
     await cdp.eval(`document.querySelector('.team__row').click(); true`)
     await sleep(1600)
     await cdp.shot('9-desempenho-do-atendente')
+  }
+
+  // A pagina inteira do atendimento, para os dois perfis. Tem endereco proprio
+  // por hash, entao basta navegar: e o mesmo endereco que o icone do cartao
+  // abre em outra aba. O token sai do localStorage desta aba, que ja fez login
+  // pela interface.
+  const sessao = await cdp.eval("localStorage.getItem('sync.console.sessao')")
+  const acesso = sessao ? JSON.parse(sessao).accessToken : null
+
+  const fila = acesso
+    ? await (await fetch('http://localhost:3333/api/admin/conversations', {
+        headers: { authorization: `Bearer ${acesso}` },
+      })).json()
+    : { items: [] }
+
+  const alvoId = (fila.items ?? fila)[0]?.id
+
+  if (alvoId) {
+    await cdp.send('Page.navigate', { url: `http://localhost:5174/#/atendimento/${alvoId}` })
+    await sleep(2600)
+    await cdp.shot('10-atendimento-pagina-inteira')
+  } else {
+    console.log('  (sem atendimento na fila para a pagina inteira)')
   }
 
   ws.close()

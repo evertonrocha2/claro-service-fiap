@@ -6,6 +6,7 @@ import { PrismaAgentRepository } from '../auth/agent.repository.js'
 import { FirstAccessUseCase } from '../auth/first-access.use-case.js'
 import { LoginUseCase } from '../auth/login.use-case.js'
 import { LogoutUseCase } from '../auth/logout.use-case.js'
+import { PasswordResetUseCase } from '../auth/password-reset.use-case.js'
 import { RefreshUseCase } from '../auth/refresh.use-case.js'
 import { PrismaRefreshTokenRepository } from '../auth/refresh-token.repository.js'
 import type { AuthDeps } from '../auth/routes.js'
@@ -94,6 +95,12 @@ export function buildContainer(): Container {
       login: new LoginUseCase(customers, refreshTokens, tokens, agents),
       refresh: new RefreshUseCase(refreshTokens, tokens),
       logout: new LogoutUseCase(refreshTokens),
+      passwordReset: new PasswordResetUseCase(
+        prisma,
+        customers,
+        refreshTokens,
+        process.env.NODE_ENV === 'production',
+      ),
       tokens,
     },
     admin: {

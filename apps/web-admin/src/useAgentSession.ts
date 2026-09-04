@@ -22,6 +22,28 @@ export function useAgentSession() {
     }
   }, [sessao])
 
+  /**
+   * Uma aba avisa as outras quando a sessao muda.
+   *
+   * Sem isto, abrir um atendimento em outra aba derrubava as duas. O refresh
+   * token gira a cada uso e o servidor detecta reuso como roubo: a aba B ainda
+   * segurava o token que a aba A ja tinha gastado, e ao usa-lo a familia
+   * inteira era revogada. Ouvir o storage mantem as abas no mesmo token.
+   */
+  useEffect(() => {
+    const aoMudar = (e: StorageEvent) => {
+      if (e.key !== CHAVE) return
+      try {
+        setSessao(e.newValue ? (JSON.parse(e.newValue) as AgentSession) : null)
+      } catch {
+        setSessao(null)
+      }
+    }
+
+    window.addEventListener('storage', aoMudar)
+    return () => window.removeEventListener('storage', aoMudar)
+  }, [])
+
   const sair = useCallback(() => setSessao(null), [])
 
   const refreshRef = useRef<string | null>(sessao?.refreshToken ?? null)

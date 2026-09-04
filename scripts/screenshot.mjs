@@ -116,7 +116,47 @@ const CLICAR_TEXTO = (texto) => `
   return true
 })()`
 
+/**
+ * Garante que a Maria tenha uma senha conhecida antes de capturar o login.
+ *
+ * O banco e compartilhado com a suite de testes, e o teste de recuperacao
+ * termina limpando o hash dela. Sem isto o script falhava no login e o motivo
+ * ficava invisivel, parecendo bug do produto.
+ *
+ * Tenta primeiro acesso; se a conta ja tiver senha, usa a recuperacao. Nos dois
+ * caminhos termina com a senha que o script usa em seguida.
+ */
+const SENHA_DEMO = 'MinhaSenha123'
+
+async function garantirSenhaDaMaria() {
+  const api = async (caminho, corpo) => {
+    const r = await fetch(`http://localhost:3333${caminho}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(corpo),
+    })
+    return { ok: r.ok, body: await r.json().catch(() => null) }
+  }
+
+  const dados = { cpf: '12345678900', email: 'maria.silva@exemplo.com' }
+
+  const primeiro = await api('/api/auth/first-access', { ...dados, password: SENHA_DEMO })
+  if (primeiro.ok) {
+    console.log('  senha da Maria definida pelo primeiro acesso')
+    return
+  }
+
+  const pedido = await api('/api/auth/password-reset', dados)
+  const code = pedido.body?.devCode
+  if (!code) throw new Error('nao consegui um codigo de recuperacao')
+
+  const trocou = await api('/api/auth/password-reset/confirm', { code, password: SENHA_DEMO })
+  if (!trocou.ok) throw new Error('nao consegui redefinir a senha da Maria')
+  console.log('  senha da Maria redefinida pela recuperacao')
+}
+
 async function main() {
+  await garantirSenhaDaMaria()
   await aguardarDevtools()
 
   const alvo = await (await fetch(`http://localhost:${PORT}/json/new?${SITE}`, { method: 'PUT' })).json()
@@ -145,7 +185,7 @@ async function main() {
   await cdp.shot('1-login')
 
   await cdp.eval(PREENCHER('input[type=email]', 'maria.silva@exemplo.com'))
-  await cdp.eval(PREENCHER('input[type=password]', 'MinhaSenha123'))
+  await cdp.eval(PREENCHER('input[type=password]', SENHA_DEMO))
   await sleep(200)
   await cdp.shot('2-login-preenchido')
 
@@ -184,6 +224,22 @@ async function main() {
   await cdp.eval(CLICAR_TEXTO('↑'))
   await sleep(2500)
   await cdp.shot('7-pede-telefone')
+
+  // Recuperacao por ultimo: ela troca a senha da Maria, e capturar antes
+  // invalidaria o login das telas acima.
+  await cdp.eval('localStorage.clear(); true')
+  await cdp.send('Page.reload')
+  await sleep(2500)
+  await cdp.eval(CLICAR_TEXTO('Esqueci minha senha'))
+  await sleep(600)
+  await cdp.eval(PREENCHER('input[inputmode=numeric]', '123.456.789-00'))
+  await cdp.eval(PREENCHER('input[type=email]', 'maria.silva@exemplo.com'))
+  await sleep(200)
+  await cdp.shot('8-recuperar-pedido')
+
+  await cdp.eval(CLICAR_TEXTO('Enviar código'))
+  await sleep(2000)
+  await cdp.shot('9-recuperar-codigo')
 
   ws.close()
 }

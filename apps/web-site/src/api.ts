@@ -85,6 +85,19 @@ export const api = {
 
   login: (email: string, password: string) => post<Session>('/api/auth/login', { email, password }),
 
+  /**
+   * Pede o codigo de recuperacao.
+   *
+   * `devCode` so vem fora de producao: nao existe remetente de e-mail neste MVP,
+   * e sem ele a tela seria um caminho sem saida. A resposta e a mesma exista ou
+   * nao a conta, para a rota nao virar um verificador de CPFs.
+   */
+  requestPasswordReset: (cpf: string, email: string) =>
+    post<{ sent: true; devCode?: string }>('/api/auth/password-reset', { cpf, email }),
+
+  confirmPasswordReset: (code: string, password: string) =>
+    post<{ customerId: string }>('/api/auth/password-reset/confirm', { code, password }),
+
   logout: (refreshToken: string) => post<{ ok: true }>('/api/auth/logout', { refreshToken }),
 
   handoff: (id: string, token?: string) =>

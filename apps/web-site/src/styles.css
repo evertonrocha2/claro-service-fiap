@@ -294,6 +294,21 @@ body {
   background: var(--line);
 }
 
+/* Os dois caminhos alternativos lado a lado, sem borda entre eles. Empilhados
+   como botoes cheios competiam com o Entrar. */
+.auth__links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field__code {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 .auth__demo {
   margin: 4px 0 0;
   padding: 12px 14px;
