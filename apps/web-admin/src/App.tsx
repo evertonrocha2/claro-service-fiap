@@ -252,19 +252,22 @@ export function App() {
             <span className="nav__badge">{encerrados.length}</span>
           </button>
         </nav>
-
-        {listaDeConversa && (
-          <Filters
-            value={filtros}
-            onChange={setFiltros}
-            showing={visiveis.length}
-            total={base.length}
-            withStatus={aba === 'fila'}
-          />
-        )}
       </div>
 
       {mostrarPulse && <Pulse metrics={metricas} />}
+
+      {/* Os filtros desceram para junto do que eles filtram.
+          Na mesma linha da navegacao, escolher a tela e recortar a lista tinham
+          o mesmo peso visual e a linha ficava longa demais para ler de relance. */}
+      {listaDeConversa && (
+        <Filters
+          value={filtros}
+          onChange={setFiltros}
+          showing={visiveis.length}
+          total={base.length}
+          withStatus={aba === 'fila'}
+        />
+      )}
 
       <div className="workarea">
         {abaEfetiva === 'fila' && (

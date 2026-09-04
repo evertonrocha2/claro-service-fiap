@@ -195,41 +195,65 @@ button {
 
 /* ---------- metrics ---------- */
 
+/* Faixa de indicadores: linha fina, nao painel de numeros grandes.
+   Sao dois grupos empilhados porque respondem a perguntas diferentes: o que
+   exige acao agora e o que ja foi entregue. O rotulo de cada grupo fica numa
+   coluna propria, fora da area das celulas, para as divisorias correrem de cima
+   a baixo da faixa em vez de comecarem no meio dela.
+   Rotulo e valor dividem a mesma linha: sete numeros grandes empilhados
+   ocupavam um terco da tela para dizer, quase sempre, zero. */
 .pulse {
-  display: grid;
-  grid-template-columns: 4fr 3fr;
+  display: flex;
+  flex-direction: column;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
 
-/* Divisória mais forte entre os grupos que entre as células: separa duas
-   perguntas diferentes, "o que exige ação" e "o que já foi entregue". */
+.pulse__group {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 34px;
+}
+
 .pulse__group + .pulse__group {
-  border-left: 2px solid var(--line);
+  border-top: 1px solid var(--line);
 }
 
 .pulse__group-title {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   margin: 0;
-  padding: 10px 20px 0;
-  font-size: var(--t-micro);
+  padding: 0 14px 0 22px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
 
+.pulse__group-title svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* Quatro colunas fixas nas duas faixas: a de baixo tem tres indicadores e o
+   quarto lugar fica vazio de proposito, para as divisorias das duas faixas
+   cairem no mesmo eixo. */
 .pulse__cells {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-left: 1px solid var(--line);
 }
 
 .pulse__cell {
-  padding: 8px 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
   min-width: 0;
 }
 
@@ -241,30 +265,36 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--t-small);
+  min-width: 0;
+  font-size: 12px;
   font-weight: 500;
   color: var(--muted);
-  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pulse__label svg {
+  flex-shrink: 0;
+  opacity: 0.75;
 }
 
 .pulse__value {
-  display: block;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--t-metric);
+  margin-left: auto;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 14px;
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .pulse__value small {
-  font-family: var(--font-ui);
-  font-size: var(--t-body);
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
-  margin-left: 2px;
-  letter-spacing: 0;
+  margin-left: 1px;
 }
 
 .pulse__cell.is-alert .pulse__value {
@@ -299,20 +329,20 @@ button {
   padding: 0;
 }
 
-/* A divisoria so existe quando ha filtros do outro lado dela. Sem isso ficava
-   uma linha solta no fim da navegacao, apontando para nada. */
-.toolbar:has(.filters) .nav {
-  padding-right: 18px;
-  border-right: 1px solid var(--line);
-}
 
+
+/* Faixa propria, colada no que ela filtra. Antes vivia dentro da toolbar e
+   herdava o flex de la; agora precisa do proprio fundo e da propria borda. */
 .filters {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex: 1;
+  gap: 16px;
   min-width: 0;
   flex-wrap: wrap;
+  padding: 9px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .filters__search {
@@ -504,7 +534,7 @@ button {
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
   transition:
     border-color 120ms ease,
@@ -519,7 +549,7 @@ button {
   text-align: left;
   background: none;
   border: none;
-  padding: 12px 13px 13px;
+  padding: 10px 12px 11px;
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -531,15 +561,15 @@ button {
    acha. Discreto resolve o ruido sem esconder a saida. */
 .card__expand {
   position: absolute;
-  top: 7px;
-  right: 7px;
+  top: 6px;
+  right: 6px;
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--panel);
   color: var(--ink-muted);
   opacity: 0.5;
@@ -598,11 +628,14 @@ button {
 .card__who {
   /* O icone de abrir flutua no canto. Sem esta folga um nome longo passava por
      baixo dele e as duas coisas se sobrepunham. */
-  padding-right: 26px;
+  padding-right: 24px;
   font-weight: 600;
-  font-size: var(--t-strong);
-  line-height: 1.3;
-  margin-bottom: 5px;
+  font-size: var(--t-body);
+  line-height: 1.25;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card__who--unknown {
@@ -613,7 +646,7 @@ button {
 .card__meta {
   display: flex;
   align-items: center;
-  gap: 4px 11px;
+  gap: 3px 10px;
   font-size: var(--t-micro);
   color: var(--muted);
   flex-wrap: wrap;
@@ -640,9 +673,9 @@ button {
 }
 
 .card__last {
-  margin: 9px 0 0;
+  margin: 7px 0 0;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--ink-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -657,8 +690,8 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: 10px;
-  padding-top: 9px;
+  margin-top: 8px;
+  padding-top: 7px;
   border-top: 1px solid var(--line);
   font-size: 11px;
   font-weight: 600;
@@ -1203,8 +1236,17 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pulse {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .pulse__group {
+    grid-template-columns: 1fr;
+  }
+
+  .pulse__group-title {
+    padding: 10px 18px 0;
+  }
+
+  .pulse__cells {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-left: none;
   }
 
   .pulse__cell {

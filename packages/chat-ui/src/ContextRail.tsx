@@ -1,4 +1,4 @@
-import { Check, Hash, MessageCircleMore, Minus, Package, Tag, User } from 'lucide-react'
+import { Check, Hash, Headset, MessageCircleMore, Minus, Package, Tag, User } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { CHANNEL_LABELS, type ConversationState, INTENT_LABELS } from './types.js'
 
@@ -113,6 +113,7 @@ export function ContextRail({ state, onHandoff, handoffBusy }: ContextRailProps)
       <div className="ctx__foot">
         {escalado && (
           <p className="ctx__note ctx__note--escalated">
+            <Headset size={14} strokeWidth={2} aria-hidden="true" />
             Um atendente assume a partir daqui e recebe esta conversa completa.
           </p>
         )}
