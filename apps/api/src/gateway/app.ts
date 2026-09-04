@@ -1,5 +1,7 @@
 import { CHANNELS, type Channel } from '@sync/contracts'
 import express, { type Express, type Request, type Response } from 'express'
+import { optionalAuth } from '../auth/middleware.js'
+import { createAuthRouter } from '../auth/routes.js'
 import { normalizeWebPayload } from '../channels/normalizer.js'
 import type { Container } from './container.js'
 
@@ -16,7 +18,12 @@ export function createApp(deps: Container): Express {
     res.json({ status: 'ok' })
   })
 
-  app.post('/api/channels/:channel/messages', async (req: Request, res: Response) => {
+  app.use('/api/auth', createAuthRouter(deps.auth))
+
+  app.post(
+    '/api/channels/:channel/messages',
+    optionalAuth(deps.auth.tokens),
+    async (req: Request, res: Response) => {
     const bruto = req.params.channel
     const channel = parseChannel(Array.isArray(bruto) ? (bruto[0] ?? '') : (bruto ?? ''))
     if (!channel) {
@@ -24,7 +31,10 @@ export function createApp(deps: Container): Express {
       return
     }
 
-    const normalizado = normalizeWebPayload(channel, req.body, {})
+    // O customerId sai do token, nunca do corpo da requisicao: aceitar do corpo
+    // deixaria qualquer um conversar como se fosse outro cliente.
+    const auth = req.auth?.kind === 'CUSTOMER' ? { customerId: req.auth.subjectId } : {}
+    const normalizado = normalizeWebPayload(channel, req.body, auth)
     if (!normalizado.success) {
       res.status(400).json({ error: normalizado.error })
       return
@@ -42,7 +52,8 @@ export function createApp(deps: Container): Express {
         error: { code: 'ERRO_INTERNO', message: 'Não foi possível processar a mensagem.' },
       })
     }
-  })
+  },
+  )
 
   return app
 }
