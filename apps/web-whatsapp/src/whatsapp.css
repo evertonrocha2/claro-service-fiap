@@ -197,8 +197,14 @@ body {
   padding: 14px 12px 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   min-height: 0;
+}
+
+.zap__stack {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .zap__notice {

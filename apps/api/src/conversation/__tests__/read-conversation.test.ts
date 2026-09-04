@@ -105,3 +105,43 @@ test('o contexto vem junto, para a barra do site continuar preenchida', async ()
   expect(r.data.context.customerName).toBe('Maria Silva')
   expect(r.data.context.intent).toBe('PROBLEMA_TECNICO')
 })
+
+test('cada mensagem diz de qual canal veio', async () => {
+  // O atendente nao troca de ferramenta: ele fica no console do Sync, que ve
+  // site e WhatsApp na mesma conversa. Ja as telas do cliente mostram so o que
+  // passou por elas, e sem este campo nao havia como recortar.
+  //
+  // Eu tinha entendido ao contrario e estava levando o historico do site para
+  // dentro da janela do WhatsApp, que nao e o que acontece no mundo real.
+  const c = await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE' })
+
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'SITE',
+    direction: 'INBOUND',
+    sender: 'CUSTOMER',
+    text: 'minha internet caiu',
+  })
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'WHATSAPP',
+    direction: 'OUTBOUND',
+    sender: 'AGENT',
+    text: 'ja estou verificando o sinal por aqui',
+  })
+
+  const r = await caso.execute(c.id)
+  if (!r.success) throw new Error('falhou')
+
+  // A conversa inteira, que e o que o console recebe.
+  expect(r.data.messages.map((m) => m.channel)).toEqual(['SITE', 'WHATSAPP'])
+
+  // O recorte de cada tela do cliente sai deste campo.
+  const noZap = r.data.messages.filter((m) => m.channel === 'WHATSAPP')
+  expect(noZap).toHaveLength(1)
+  expect(noZap[0]?.text).toContain('verificando o sinal')
+
+  const noSite = r.data.messages.filter((m) => m.channel !== 'WHATSAPP')
+  expect(noSite).toHaveLength(1)
+  expect(noSite[0]?.text).toBe('minha internet caiu')
+})

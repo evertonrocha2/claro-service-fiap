@@ -1,5 +1,15 @@
-import { CircleCheck, Hand, Lightbulb, MousePointerClick, RefreshCw, Send } from 'lucide-react'
-import { useState } from 'react'
+import {
+  ArrowRightLeft,
+  ChevronDown,
+  ChevronUp,
+  CircleCheck,
+  Hand,
+  Lightbulb,
+  MousePointerClick,
+  RefreshCw,
+  Send,
+} from 'lucide-react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import {
   api,
   CHANNEL_LABELS,
@@ -33,6 +43,20 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
   const [texto, setTexto] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  const [ofertaAberta, setOfertaAberta] = useState(false)
+
+  /**
+   * A conversa abre na ultima mensagem, nao na primeira.
+   *
+   * Sem isto o atendente assume um atendimento e le a primeira coisa que a
+   * pessoa disse, precisando rolar para achar onde a conversa esta. Vale ainda
+   * mais depois da troca de canal, porque o que interessa esta no fim.
+   */
+  const fimDaConversa = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fimDaConversa.current?.scrollIntoView({ block: 'end' })
+  }, [detail.id, detail.messages.length])
 
   // Comparar por id, não por status: sem isso qualquer atendimento em andamento
   // pareceria meu, e o atendente só descobriria o contrário ao ver o envio falhar.
@@ -112,6 +136,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
             <span className="offer__tag">
               {OFFER_LABELS[detail.offer.offerKind] ?? detail.offer.offerKind}
             </span>
+
             <button
               className="offer__refresh"
               type="button"
@@ -121,25 +146,69 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
             >
               <RefreshCw size={13} strokeWidth={2} />
             </button>
+
+            <button
+              className="offer__refresh"
+              type="button"
+              onClick={() => setOfertaAberta((v) => !v)}
+              aria-expanded={ofertaAberta}
+              aria-label={ofertaAberta ? 'Recolher sugestão' : 'Abrir sugestão'}
+            >
+              {ofertaAberta ? (
+                <ChevronUp size={14} strokeWidth={2.4} />
+              ) : (
+                <ChevronDown size={14} strokeWidth={2.4} />
+              )}
+            </button>
           </header>
 
           <p className="offer__headline">{detail.offer.headline}</p>
-          <p className="offer__rationale">{detail.offer.rationale}</p>
 
-          <p className="offer__meta">
-            {detail.offer.source === 'LLM' ? 'Gerada por IA' : 'Gerada por regras'} ·{' '}
-            {Math.round(detail.offer.confidence * 100)}% de confiança
-          </p>
+          {/* O corpo vem recolhido. A conversa e a razao desta tela existir, e
+              com a sugestao toda aberta ela sobrava com duas mensagens visiveis,
+              justamente onde o atendente le o historico do site e do WhatsApp
+              juntos. A justificativa continua a um clique. */}
+          {ofertaAberta && (
+            <>
+              <p className="offer__rationale">{detail.offer.rationale}</p>
+
+              <p className="offer__meta">
+                {detail.offer.source === 'LLM' ? 'Gerada por IA' : 'Gerada por regras'} ·{' '}
+                {Math.round(detail.offer.confidence * 100)}% de confiança
+              </p>
+            </>
+          )}
         </section>
       )}
 
       <div className="detail__thread">
-        {detail.messages.map((m) => (
-          <div key={m.id} className={`msg msg--${m.sender.toLowerCase()}`}>
-            <span className="msg__who">{QUEM[m.sender]}</span>
-            {m.text}
-          </div>
-        ))}
+        {/* A troca de canal ganha uma marca na propria conversa.
+            Depois que cada canal do cliente passou a mostrar so o que passou por
+            ele, este console e o unico lugar que ve as duas pontas juntas. Sem
+            esta linha o atendente le tudo como se fosse uma conversa continua e
+            nao percebe que a pessoa saiu do site e esta no WhatsApp agora. */}
+        {detail.messages.map((m, i) => {
+          const anterior = detail.messages[i - 1]
+          const trocouDeCanal = anterior !== undefined && anterior.channel !== m.channel
+
+          return (
+            <Fragment key={m.id}>
+              {trocouDeCanal && (
+                <p className="thread__switch">
+                  <ArrowRightLeft size={13} strokeWidth={2.4} aria-hidden="true" />
+                  Continua no {CHANNEL_LABELS[m.channel]}
+                </p>
+              )}
+
+              <div className={`msg msg--${m.sender.toLowerCase()}`}>
+                <span className="msg__who">{QUEM[m.sender]}</span>
+                {m.text}
+              </div>
+            </Fragment>
+          )
+        })}
+
+        <div ref={fimDaConversa} />
       </div>
 
       <div className="detail__actions">

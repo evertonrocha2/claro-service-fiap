@@ -18,6 +18,14 @@ export type PublicMessage = {
   sender: 'CUSTOMER' | 'BOT' | 'AGENT'
   text: string
   at: Date
+  /**
+   * Canal onde esta mensagem aconteceu.
+   *
+   * A conversa e uma so no banco, e e isso que da contexto ao atendente. Mas
+   * cada canal do cliente mostra somente o que passou por ele: o WhatsApp da
+   * pessoa nao tem, e nao deveria ter, o historico digitado no site.
+   */
+  channel: Channel
 }
 
 export type PublicConversation = {
@@ -104,6 +112,7 @@ export class ReadConversationUseCase {
         sender: m.sender,
         text: m.text,
         at: m.createdAt,
+        channel: m.channel,
       })),
     })
   }

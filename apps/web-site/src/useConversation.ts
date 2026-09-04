@@ -36,13 +36,19 @@ export function useConversation(token?: string) {
       status: dados.status,
       context: dados.context,
     })
+    // Cada canal do cliente mostra so o que passou por ele. Depois que a pessoa
+    // migra para o WhatsApp, o atendente responde de dentro do Sync e a resposta
+    // sai no WhatsApp dela, nao nesta aba. Quem ve as duas pontas juntas e o
+    // console do atendente, e e ali que o contexto tem de estar completo.
     setMensagens(
-      dados.messages.map((m) => ({
-        id: m.id,
-        role: m.sender,
-        text: m.text,
-        at: new Date(m.at),
-      })),
+      dados.messages
+        .filter((m) => m.channel !== 'WHATSAPP')
+        .map((m) => ({
+          id: m.id,
+          role: m.sender,
+          text: m.text,
+          at: new Date(m.at),
+        })),
     )
   }, [])
 

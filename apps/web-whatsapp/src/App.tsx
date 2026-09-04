@@ -32,6 +32,18 @@ function ler(chave: string): string | null {
  *
  * O backend não sabe que isto é falso, e é justamente esse o teste: quando a
  * Meta entrar, muda o adaptador de entrada e nada mais.
+ *
+ * ESTA TELA MOSTRA SÓ O QUE PASSOU PELO WHATSAPP.
+ *
+ * O atendente não troca de ferramenta: ele continua no console do Sync, que
+ * mostra site e WhatsApp na mesma conversa, e é dali que ele responde. É o modelo
+ * de caixa de entrada unificada, tipo ManyChat. O contexto viaja pelo sistema,
+ * não pela tela do cliente.
+ *
+ * Então o histórico do site não aparece aqui, e não deveria: no WhatsApp de
+ * verdade a pessoa vê a conversa do WhatsApp. Trazer o que ela digitou no site
+ * para dentro desta janela não acontece no mundo real e faria a demonstração
+ * mentir sobre onde a continuidade mora.
  */
 export function App() {
   const [telefone, setTelefone] = useState(() => ler(CHAVE_TELEFONE) ?? '')
@@ -59,7 +71,9 @@ export function App() {
     if (!id) return
     try {
       const conversa = await api.load(id)
-      setMensagens(conversa.messages)
+      // A conversa vem inteira, porque e uma so no banco. O recorte e daqui:
+      // esta janela e o WhatsApp do cliente, nao o painel do atendente.
+      setMensagens(conversa.messages.filter((m) => m.channel === 'WHATSAPP'))
     } catch {
       conversaRef.current = null
     }
@@ -153,36 +167,41 @@ export function App() {
       </header>
 
       <div className="zap__thread">
-        <p className="zap__notice">
-          As mensagens são protegidas com criptografia de ponta a ponta. Simulação para demonstração
-          do Sync.
-        </p>
+        {/* A pilha existe para as mensagens assentarem embaixo, como no
+            aplicativo. Empurrar com justify-content no contentor que rola corta
+            o topo quando a conversa passa da altura da tela. */}
+        <div className="zap__stack">
+          <p className="zap__notice">
+            As mensagens são protegidas com criptografia de ponta a ponta. Simulação para
+            demonstração do Sync.
+          </p>
 
-        {mensagens.map((m) => (
-          <div
-            key={m.id}
-            className={`zap__msg ${m.sender === 'CUSTOMER' ? 'zap__msg--mine' : 'zap__msg--theirs'}`}
-          >
-            {m.sender === 'AGENT' && <span className="zap__sender">Atendente</span>}
-            {m.text}
-            {m.sender === 'CUSTOMER' && (
+          {mensagens.map((m) => (
+            <div
+              key={m.id}
+              className={`zap__msg ${m.sender === 'CUSTOMER' ? 'zap__msg--mine' : 'zap__msg--theirs'}`}
+            >
+              {m.sender === 'AGENT' && <span className="zap__sender">Atendente</span>}
+              {m.text}
+              {m.sender === 'CUSTOMER' && (
+                <span className="zap__ticks" aria-hidden="true">
+                  <CheckCheck size={14} strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+          ))}
+
+          {enviando && (
+            <div className="zap__msg zap__msg--mine zap__msg--pending">
+              enviando
               <span className="zap__ticks" aria-hidden="true">
-                <CheckCheck size={14} strokeWidth={2.5} />
+                <Check size={14} strokeWidth={2.5} />
               </span>
-            )}
-          </div>
-        ))}
+            </div>
+          )}
 
-        {enviando && (
-          <div className="zap__msg zap__msg--mine zap__msg--pending">
-            enviando
-            <span className="zap__ticks" aria-hidden="true">
-              <Check size={14} strokeWidth={2.5} />
-            </span>
-          </div>
-        )}
-
-        <div ref={fim} />
+          <div ref={fim} />
+        </div>
       </div>
 
       {erro && <p className="zap__error">{erro}</p>}

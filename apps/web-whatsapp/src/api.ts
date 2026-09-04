@@ -3,6 +3,7 @@ export type Mensagem = {
   sender: 'CUSTOMER' | 'BOT' | 'AGENT'
   text: string
   at: string
+  channel: 'SITE' | 'APP' | 'WHATSAPP'
 }
 
 export type Conversa = {

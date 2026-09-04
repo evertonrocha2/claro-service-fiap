@@ -79,7 +79,36 @@ const PREENCHER = (sel, val) => `
 
 const SUBMETER = `(() => { document.querySelector('form').requestSubmit(); return true })()`
 
+const api = async (caminho, corpo, token) =>
+  (await fetch(`http://localhost:3333${caminho}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(corpo ?? {}),
+  })).json()
+
 async function main() {
+  // O atendente entra primeiro porque a limpeza tambem passa por ele.
+  const login = await api('/api/auth/agent/login', {
+    email: 'bruno@claro.com.br',
+    password: 'Atendente123',
+  })
+
+  // Encerra o que sobrou de execucoes anteriores.
+  //
+  // A Maria e a cliente do cenario, e uma mensagem nova dela cai na conversa
+  // aberta que ela ja tem, que e o comportamento correto do produto. Sem isto a
+  // captura acumulava duas jornadas na mesma tela e ficava ilegivel.
+  const fila = await (await fetch('http://localhost:3333/api/admin/conversations', {
+    headers: { authorization: `Bearer ${login.accessToken}` },
+  })).json()
+
+  for (const item of fila.items ?? fila) {
+    await api(`/api/admin/conversations/${item.id}/resolve`, {}, login.accessToken)
+  }
+
   // Monta o Cenario 1 pela API e pega o link de continuidade.
   const inicio = await (await fetch('http://localhost:3333/api/channels/site/messages', {
     method: 'POST',
@@ -127,11 +156,26 @@ async function main() {
   await sleep(2600)
   await cdp.shot('3-continuidade')
 
-  await cdp.eval(PREENCHER('input[placeholder=Mensagem]', 'sim, o modem esta com a luz vermelha'))
+  await cdp.eval(PREENCHER('input[placeholder=Mensagem]', 'quero falar com um atendente'))
   await sleep(200)
   await cdp.eval(SUBMETER)
   await sleep(2600)
   await cdp.shot('4-conversa-segue')
+
+  // O atendente NAO abre o WhatsApp: ele responde de dentro do console do Sync,
+  // que ve site e WhatsApp na mesma conversa. E o modelo de caixa unificada.
+  // Esta parte prova que a resposta dele sai no aparelho do cliente.
+  const id = inicio.conversationId
+  await api(`/api/admin/conversations/${id}/claim`, {}, login.accessToken)
+  await api(
+    `/api/admin/conversations/${id}/messages`,
+    { text: 'Aqui e o Bruno, da Claro. Identifiquei instabilidade na sua regiao e ja abri o reparo.' },
+    login.accessToken,
+  )
+
+  // A tela consulta a API a cada quatro segundos.
+  await sleep(5200)
+  await cdp.shot('5-atendente-pelo-sync')
 
   ws.close()
 }

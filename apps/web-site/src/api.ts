@@ -23,7 +23,13 @@ export type LoadedConversation = {
   protocol: string
   status: NonNullable<ConversationState['status']>
   context: NonNullable<ConversationState['context']>
-  messages: { id: string; sender: 'CUSTOMER' | 'BOT' | 'AGENT'; text: string; at: string }[]
+  messages: {
+    id: string
+    sender: 'CUSTOMER' | 'BOT' | 'AGENT'
+    text: string
+    at: string
+    channel: 'SITE' | 'APP' | 'WHATSAPP'
+  }[]
 }
 
 export class SyncApiError extends Error {
