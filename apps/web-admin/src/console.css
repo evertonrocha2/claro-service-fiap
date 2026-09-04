@@ -519,7 +519,7 @@ button {
   text-align: left;
   background: none;
   border: none;
-  padding: 11px 12px;
+  padding: 12px 13px 13px;
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -572,7 +572,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #6b7280;
+  color: var(--muted);
   font-weight: 600;
 }
 
@@ -596,9 +596,13 @@ button {
 }
 
 .card__who {
+  /* O icone de abrir flutua no canto. Sem esta folga um nome longo passava por
+     baixo dele e as duas coisas se sobrepunham. */
+  padding-right: 26px;
   font-weight: 600;
   font-size: var(--t-strong);
-  margin-bottom: 4px;
+  line-height: 1.3;
+  margin-bottom: 5px;
 }
 
 .card__who--unknown {
@@ -609,7 +613,7 @@ button {
 .card__meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px 11px;
   font-size: var(--t-micro);
   color: var(--muted);
   flex-wrap: wrap;
@@ -623,19 +627,22 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* Um tom acima do resto da linha. Sem os pontos separadores e o contraste que
+   agrupa: espera e situacao em cinza, canal um pouco mais firme. */
 .card__channel {
   color: var(--ink-2);
+  font-weight: 500;
 }
 
 .card__wait--urgent {
   color: var(--claro-deep);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .card__last {
-  margin: 8px 0 0;
+  margin: 9px 0 0;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -643,11 +650,24 @@ button {
   overflow: hidden;
 }
 
+/* Quem esta com o atendimento e atribuicao, nao alerta.
+   Em ambar e sem separacao a linha lia como aviso e disputava atencao com a
+   espera vermelha, que e o unico numero que deveria gritar no quadro. */
 .card__agent {
-  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
   font-size: 11px;
-  color: var(--amber);
   font-weight: 600;
+  color: var(--muted);
+}
+
+.card__agent svg {
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 
 /* ---------- detail ---------- */

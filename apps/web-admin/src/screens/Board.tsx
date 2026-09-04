@@ -1,4 +1,4 @@
-import { ExternalLink, Sparkles } from 'lucide-react'
+import { Clock, ExternalLink, Sparkles, UserRound } from 'lucide-react'
 import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
 import { ticketHref } from '../route.js'
 
@@ -66,24 +66,31 @@ function Card({
             </span>
           ) : (
             <span className={urgente ? 'card__wait--urgent' : undefined}>
+              {/* Cor sozinha nao serve de aviso: quem nao distingue vermelho de
+                  cinza le so um numero. O relogio aparece junto da cor. */}
+              {urgente && <Clock size={11} strokeWidth={2.4} aria-hidden="true" />}
               {formatWait(item.waitingSeconds)}
             </span>
           )}
-          <span aria-hidden="true">·</span>
-          <span>{CHANNEL_LABELS[item.channel]}</span>
+          {/* Sem pontos separadores: quando a linha quebrava, o ponto ficava
+              pendurado sozinho no fim da primeira linha. O espaco separa igual
+              e nao tem como sobrar. */}
+          <span className="card__channel">{CHANNEL_LABELS[item.channel]}</span>
           {item.originChannel !== item.channel && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span title="Atendimento iniciado em outro canal">
-                origem {CHANNEL_LABELS[item.originChannel]}
-              </span>
-            </>
+            <span title="Atendimento iniciado em outro canal">
+              origem {CHANNEL_LABELS[item.originChannel]}
+            </span>
           )}
         </div>
 
         {item.lastMessage && <p className="card__last">{item.lastMessage}</p>}
 
-        {item.assignedAgentName && <div className="card__agent">{item.assignedAgentName}</div>}
+        {item.assignedAgentName && (
+          <div className="card__agent">
+            <UserRound size={11} strokeWidth={2.2} aria-hidden="true" />
+            {item.assignedAgentName}
+          </div>
+        )}
       </button>
     </article>
   )
