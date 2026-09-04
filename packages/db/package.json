@@ -4,9 +4,10 @@
   "main": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "migrate": "prisma migrate dev",
+    "migrate": "node scripts/prisma.mjs migrate dev",
     "seed": "tsx prisma/seed.ts",
-    "generate": "prisma generate"
+    "generate": "node scripts/prisma.mjs generate",
+    "prisma": "node scripts/prisma.mjs"
   },
   "type": "module",
   "types": "./src/index.ts",

@@ -182,3 +182,28 @@ model IntentCache {
   hits       Int      @default(0)
   createdAt  DateTime @default(now())
 }
+
+/// Refresh token com rastreio de família.
+///
+/// Cada login abre uma família. Cada rotação cria um token novo apontando para a
+/// mesma família e marca o anterior como usado. Se um token já usado voltar a ser
+/// apresentado, é sinal de roubo: a família inteira é revogada de uma vez.
+model RefreshToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  familyId   String
+  subjectId  String
+  subjectKind SubjectKind
+  expiresAt  DateTime
+  usedAt     DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([familyId])
+  @@index([subjectId, subjectKind])
+}
+
+enum SubjectKind {
+  CUSTOMER
+  AGENT
+}
