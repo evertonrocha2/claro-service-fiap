@@ -1,4 +1,7 @@
 import { prisma } from '@sync/db'
+import { AdminService } from '../admin/admin.service.js'
+import type { AdminDeps } from '../admin/routes.js'
+import { PrismaAgentRepository } from '../auth/agent.repository.js'
 import { FirstAccessUseCase } from '../auth/first-access.use-case.js'
 import { LoginUseCase } from '../auth/login.use-case.js'
 import { LogoutUseCase } from '../auth/logout.use-case.js'
@@ -22,6 +25,7 @@ import type { IIntentClassifier } from '../nlp/types.js'
 export type Container = {
   orchestrator: ConversationOrchestrator
   auth: AuthDeps
+  admin: AdminDeps
 }
 
 /** Raiz de composição. É o único lugar que instancia implementações concretas. */
@@ -44,9 +48,13 @@ export function buildContainer(): Container {
     ),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
-      login: new LoginUseCase(customers, refreshTokens, tokens),
+      login: new LoginUseCase(customers, refreshTokens, tokens, new PrismaAgentRepository(prisma)),
       refresh: new RefreshUseCase(refreshTokens, tokens),
       logout: new LogoutUseCase(refreshTokens),
+      tokens,
+    },
+    admin: {
+      service: new AdminService(prisma, messages),
       tokens,
     },
   }

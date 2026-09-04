@@ -72,6 +72,15 @@ export function createAuthRouter(deps: AuthDeps): Router {
     responder(res, await deps.login.execute(parsed.data))
   })
 
+  router.post('/agent/login', limiteTentativas, async (req: Request, res: Response) => {
+    const parsed = loginSchema.safeParse(req.body)
+    if (!parsed.success) {
+      responder(res, err('PAYLOAD_INVALIDO', 'Informe e-mail e senha.'))
+      return
+    }
+    responder(res, await deps.login.executeAgent(parsed.data))
+  })
+
   router.post('/refresh', async (req: Request, res: Response) => {
     const parsed = refreshSchema.safeParse(req.body)
     if (!parsed.success) {

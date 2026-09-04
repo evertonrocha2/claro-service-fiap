@@ -1,4 +1,7 @@
+import { hash } from '@node-rs/argon2'
 import { prisma } from '../src/client.js'
+
+const hashPassword = (senha: string) => hash(senha)
 
 /**
  * Base semeada dos três cenários do Documento de Visão.
@@ -77,6 +80,28 @@ async function main() {
       label: 'Plano móvel final 1234',
     },
   })
+
+  // Equipe do time Sync Unit. A senha e a mesma para todos porque isto e uma
+  // base de desenvolvimento; em producao o primeiro acesso definiria cada uma.
+  const senhaPadrao = await hashPassword('Atendente123')
+
+  const equipe = [
+    { name: 'Leticia Vitalino', email: 'leticia@claro.com.br', role: 'MANAGER' as const },
+    { name: 'Gustavo Ressurreicao', email: 'gustavo@claro.com.br', role: 'AGENT' as const },
+    { name: 'Bruno Granado', email: 'bruno@claro.com.br', role: 'AGENT' as const },
+    { name: 'Isaac Destro', email: 'isaac@claro.com.br', role: 'AGENT' as const },
+  ]
+
+  for (const pessoa of equipe) {
+    await prisma.agent.upsert({
+      where: { email: pessoa.email },
+      // A senha entra tambem no update: o seed precisa reparar uma linha que
+      // outro processo tenha deixado com hash invalido, senao o login quebra
+      // e o motivo fica invisivel.
+      update: { name: pessoa.name, role: pessoa.role, passwordHash: senhaPadrao },
+      create: { ...pessoa, passwordHash: senhaPadrao },
+    })
+  }
 
   console.log('seed concluído')
 }

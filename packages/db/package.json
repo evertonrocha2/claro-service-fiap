@@ -12,6 +12,7 @@
   "type": "module",
   "types": "./src/index.ts",
   "dependencies": {
+    "@node-rs/argon2": "^2.0.0",
     "@prisma/client": "^6.0.0"
   },
   "devDependencies": {

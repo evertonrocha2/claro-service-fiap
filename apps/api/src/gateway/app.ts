@@ -1,5 +1,6 @@
 import { CHANNELS, type Channel } from '@sync/contracts'
 import express, { type Express, type Request, type Response } from 'express'
+import { createAdminRouter } from '../admin/routes.js'
 import { optionalAuth } from '../auth/middleware.js'
 import { createAuthRouter } from '../auth/routes.js'
 import { normalizeWebPayload } from '../channels/normalizer.js'
@@ -19,6 +20,7 @@ export function createApp(deps: Container): Express {
   })
 
   app.use('/api/auth', createAuthRouter(deps.auth))
+  app.use('/api/admin', createAdminRouter(deps.admin))
 
   app.post(
     '/api/channels/:channel/messages',
