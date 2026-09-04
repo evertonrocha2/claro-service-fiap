@@ -69,7 +69,7 @@ npm run dev:admin    # team console   http://localhost:5174
 ## Checks
 
 ```bash
-npm test         # 177 tests
+npm test         # 230 tests
 npm run typecheck
 npm run lint
 ```
@@ -91,6 +91,7 @@ apps/
     src/identity/      resolves a customer by login, phone, CPF or protocol
     src/conversation/  orchestration, escalation policy, automatic replies
     src/nlp/           rules, Gemini, cache, PII redaction
+    src/insights/      offer suggestion from customer profile
     src/context/       Prisma repositories
     src/admin/         queue, conversation handling, metrics
   web-site/     customer chat, React 19 + Vite
@@ -134,6 +135,12 @@ way to tell which of the two parties is legitimate, so both go.
 **The console board is organised by intent, not by workflow stage.** Columns run
 in order of the cost of ignoring them, so cancellation sits leftmost and reading
 order becomes triage order.
+
+**Offer suggestions are generated when an agent claims a conversation.** That is
+when they are used. Rules always produce one, so the panel is never empty and
+never depends on LLM quota, and their order is business priority: an open
+technical fault beats any sale, and an overdue invoice beats retention. What
+reaches the model is a profile of counts and intents, never the conversation.
 
 **The customer sees what Sync knows.** The context rail on the chat is always
 visible. It is the point of the product made legible, and it doubles as LGPD
