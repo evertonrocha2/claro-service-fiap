@@ -11,7 +11,8 @@ export type Session = {
 export type SendMessageResult = {
   conversationId: string
   protocol: string
-  reply: string
+  /** Nulo quando um atendente esta conduzindo: o Sync nao fala por cima. */
+  reply: string | null
   intent: NonNullable<ConversationState['context']>['intent']
   status: NonNullable<ConversationState['status']>
   context: NonNullable<ConversationState['context']>

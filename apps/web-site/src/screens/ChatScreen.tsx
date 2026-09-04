@@ -66,10 +66,14 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
         context: r.context,
       })
 
-      setMensagens((atuais) => [
-        ...atuais,
-        { id: crypto.randomUUID(), role: 'BOT', text: r.reply, at: new Date() },
-      ])
+      // Sem resposta quando um atendente esta no comando. Adicionar a bolha de
+      // qualquer jeito deixava um balao vazio do Sync no fim da conversa.
+      if (r.reply) {
+        setMensagens((atuais) => [
+          ...atuais,
+          { id: crypto.randomUUID(), role: 'BOT', text: r.reply as string, at: new Date() },
+        ])
+      }
     } catch (e) {
       setErro(
         e instanceof SyncApiError ? e.message : 'Sem conexão com o servidor. Tente novamente.',
@@ -91,7 +95,6 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
   return (
     <div className="sync app">
       <AppHeader
-        area="site"
         title="Central de Atendimento"
         {...(sessao ? { identity: { name: sessao.customer.name }, onSignOut: onSair } : {})}
         {...(sessao ? {} : { onSignIn: onEntrar })}

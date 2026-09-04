@@ -1,4 +1,4 @@
-import { AppHeader } from '@sync/chat-ui'
+import { AppHeader, CustomerSiteLink } from '@sync/chat-ui'
 import { History as HistoryIcon, Inbox, User, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -27,16 +27,14 @@ import { Pulse } from './screens/Pulse.js'
 import { useAgentSession } from './useAgentSession.js'
 
 /**
- * Cada tela responde a uma pergunta diferente, e e por isso que sao estas.
+ * Cada tela responde a uma pergunta diferente, e o menu muda com o perfil.
  *
- * fila       quem precisa de mim agora
- * painel     o que esta na minha mao e o que eu ja fiz
- * historico  o que a equipe ja encerrou
- * equipe     como a equipe esta, so para gestao
+ * Atendente:  Fila | Meu painel | Historico
+ * Gestao:     Fila | Equipe     | Historico
  *
- * A versao anterior tinha "Meus atendimentos" como uma quarta lista de conversas
- * e escondia os numeros pessoais dentro do detalhe que so o gestor abria pela
- * aba da equipe. Um atendente nao tinha caminho nenhum ate os proprios numeros.
+ * A gestao nao tem "Meu painel" porque a pergunta dela nao e "como eu estou", e
+ * "como cada pessoa esta". Ela se ve como uma linha na propria lista da equipe,
+ * e clicar nessa linha abre o mesmo painel. Uma tela so, dois caminhos.
  */
 type Aba = 'fila' | 'painel' | 'historico' | 'equipe'
 
@@ -157,7 +155,11 @@ export function App() {
     }
   }
 
-  const base = aba === 'fila' ? fila : encerrados
+  // Se a gestora estiver na aba pessoal por qualquer motivo, o lugar dela e a
+  // equipe. Esconder o botao sem redirecionar deixaria uma tela sem saida.
+  const abaEfetiva: Aba = aba === 'painel' && eu?.canViewTeam ? 'equipe' : aba
+
+  const base = abaEfetiva === 'fila' ? fila : encerrados
   const visiveis = useMemo(() => aplicarFiltros(base, filtros), [base, filtros])
 
   if (!sessao || !token) {
@@ -169,17 +171,17 @@ export function App() {
     if (selecionado) await carregarDetalhe(selecionado)
   }
 
-  const listaDeConversa = LISTAS_DE_CONVERSA.includes(aba)
+  const listaDeConversa = LISTAS_DE_CONVERSA.includes(abaEfetiva)
 
   // A faixa de indicadores e da operacao inteira. No painel pessoal ela
   // competiria com os numeros da propria pessoa e os dois se confundiriam.
-  const mostrarPulse = aba === 'fila' || aba === 'equipe'
+  const mostrarPulse = abaEfetiva === 'fila' || abaEfetiva === 'equipe'
 
   return (
     <div className="shell">
       <AppHeader
-        area="console"
         title="Console de Atendimento"
+        nav={<CustomerSiteLink />}
         identity={{
           name: sessao.agent.name,
           role: sessao.agent.role === 'MANAGER' ? 'Gestão' : 'Atendimento',
@@ -201,31 +203,21 @@ export function App() {
             <span className="nav__badge">{fila.length}</span>
           </button>
 
-          <button
-            type="button"
-            className="nav__item"
-            aria-current={aba === 'painel'}
-            onClick={() => trocarAba('painel')}
-          >
-            <User size={15} strokeWidth={2} />
-            Meu painel
-            {meus.length > 0 && <span className="nav__badge">{meus.length}</span>}
-          </button>
+          {/* Atendente ve o proprio painel aqui. Gestao chega ao dela pela
+              lista da equipe, onde aparece como uma linha entre as outras. */}
+          {eu && !eu.canViewTeam && (
+            <button
+              type="button"
+              className="nav__item"
+              aria-current={aba === 'painel'}
+              onClick={() => trocarAba('painel')}
+            >
+              <User size={15} strokeWidth={2} />
+              Meu painel
+              {meus.length > 0 && <span className="nav__badge">{meus.length}</span>}
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="nav__item"
-            aria-current={aba === 'historico'}
-            onClick={() => trocarAba('historico')}
-          >
-            <HistoryIcon size={15} strokeWidth={2} />
-            Histórico
-            <span className="nav__badge">{encerrados.length}</span>
-          </button>
-
-          {/* A aba da equipe so existe para quem tem o perfil. Esconder nao e a
-              protecao: a API recusa de todo jeito. Isto e so nao oferecer porta
-              que nao abre. */}
           {eu?.canViewTeam && (
             <button
               type="button"
@@ -238,6 +230,17 @@ export function App() {
               <span className="nav__badge">{equipe.length}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            className="nav__item"
+            aria-current={aba === 'historico'}
+            onClick={() => trocarAba('historico')}
+          >
+            <HistoryIcon size={15} strokeWidth={2} />
+            Histórico
+            <span className="nav__badge">{encerrados.length}</span>
+          </button>
         </nav>
 
         {listaDeConversa && (
@@ -254,11 +257,11 @@ export function App() {
       {mostrarPulse && <Pulse metrics={metricas} />}
 
       <div className="workarea">
-        {aba === 'fila' && (
+        {abaEfetiva === 'fila' && (
           <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
         )}
 
-        {aba === 'historico' && (
+        {abaEfetiva === 'historico' && (
           <History
             items={visiveis}
             selectedId={selecionado}
@@ -267,7 +270,7 @@ export function App() {
           />
         )}
 
-        {aba === 'painel' && (
+        {abaEfetiva === 'painel' && (
           <MyDashboard
             performance={meuDesempenho}
             conversations={meus}
@@ -276,7 +279,7 @@ export function App() {
           />
         )}
 
-        {aba === 'equipe' &&
+        {abaEfetiva === 'equipe' &&
           (olhando ? (
             <MyDashboard
               performance={olhando}

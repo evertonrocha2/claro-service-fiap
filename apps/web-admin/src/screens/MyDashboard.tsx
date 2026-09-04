@@ -3,9 +3,9 @@ import type { ComponentType } from 'react'
 import {
   type AgentPerformance,
   CHANNEL_LABELS,
+  formatWait,
   INTENT_COLUMNS,
   type QueueItem,
-  formatWait,
 } from '../api.js'
 
 function intentLabel(intent: QueueItem['intent']): string {

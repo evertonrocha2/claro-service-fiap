@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { type AgentSession, api } from './api.js'
+import { type AgentSession, api, registrarRenovacao } from './api.js'
 
 const CHAVE = 'sync.console.sessao'
 
@@ -26,6 +26,32 @@ export function useAgentSession() {
 
   const refreshRef = useRef<string | null>(sessao?.refreshToken ?? null)
   refreshRef.current = sessao?.refreshToken ?? null
+
+  /**
+   * Entrega ao cliente de API uma forma de renovar quando algo voltar 401.
+   *
+   * Sem isto, a única renovação era a do temporizador. Se a máquina dormisse ou
+   * a aba ficasse em segundo plano além dos quinze minutos, o console parava e
+   * culpava a conexão.
+   */
+  useEffect(() => {
+    registrarRenovacao(async () => {
+      const atual = refreshRef.current
+      if (!atual) return null
+
+      try {
+        const novo = await api.refresh(atual)
+        refreshRef.current = novo.refreshToken
+        setSessao((s) => (s ? { ...s, ...novo } : s))
+        return novo.accessToken
+      } catch {
+        setSessao(null)
+        return null
+      }
+    })
+
+    return () => registrarRenovacao(null)
+  }, [])
 
   /**
    * Renova o acesso antes de ele vencer.

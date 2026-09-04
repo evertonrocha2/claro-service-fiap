@@ -43,7 +43,8 @@ test('mensagem anônima cria conversa e pede identificação', async () => {
 
   expect(r.data.intent).toBe('PROBLEMA_TECNICO')
   expect(r.data.status).toBe('BOT')
-  expect(r.data.reply.toLowerCase()).toContain('cpf')
+  expect(r.data.reply).not.toBeNull()
+  expect(r.data.reply?.toLowerCase()).toContain('cpf')
   expect(r.data.protocol).toHaveLength(13)
 })
 
@@ -55,8 +56,8 @@ test('cliente autenticado recebe resposta contextualizada sem pedir CPF', async 
   expect(r.success).toBe(true)
   if (!r.success) return
 
-  expect(r.data.reply).toContain('Claro Net Fibra 500 Mega')
-  expect(r.data.reply.toLowerCase()).not.toContain('informar seu cpf')
+  expect(r.data.reply ?? '').toContain('Claro Net Fibra 500 Mega')
+  expect(r.data.reply?.toLowerCase()).not.toContain('informar seu cpf')
 })
 
 test('as duas mensagens ficam gravadas na ordem certa', async () => {
@@ -78,7 +79,7 @@ test('cancelamento marca a conversa como aguardando humano', async () => {
   if (!r.success) return
 
   expect(r.data.status).toBe('WAITING_HUMAN')
-  expect(r.data.reply.toLowerCase()).toContain('histórico')
+  expect(r.data.reply?.toLowerCase()).toContain('histórico')
 
   const conversa = await conversas.findById(r.data.conversationId)
   expect(conversa?.status).toBe('WAITING_HUMAN')
@@ -107,7 +108,7 @@ test('CPF informado no texto identifica o cliente na mesma mensagem', async () =
 
   const conversa = await conversas.findById(r.data.conversationId)
   expect(conversa?.customerId).not.toBeNull()
-  expect(r.data.reply).toContain('Plano móvel final 9876')
+  expect(r.data.reply ?? '').toContain('Plano móvel final 9876')
 })
 
 test('duas mensagens desconhecidas seguidas escalam', async () => {
@@ -136,8 +137,8 @@ test('RF005: o cliente identificado numa mensagem não é perguntado de novo na 
   )
   if (!segunda.success) throw new Error('falhou')
 
-  expect(segunda.data.reply).toContain('20/05')
-  expect(segunda.data.reply.toLowerCase()).not.toContain('informar seu cpf')
+  expect(segunda.data.reply ?? '').toContain('20/05')
+  expect(segunda.data.reply?.toLowerCase()).not.toContain('informar seu cpf')
 })
 
 test('a resposta carrega o contexto conhecido, para a interface mostrar', async () => {
@@ -220,4 +221,94 @@ test('o telefone da primeira mensagem do WhatsApp fica gravado na conversa', asy
   if (!r.success) throw new Error('falhou')
 
   expect((await conversas.findById(r.data.conversationId))?.contactPhone).toBe('+5511977776666')
+})
+
+test('depois de escalar, o bot para de responder', async () => {
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+
+  const escalou = await orquestrador.handle(
+    entrada('quero cancelar meu plano', { customerId: maria.id }),
+  )
+  if (!escalou.success) throw new Error('falhou')
+  expect(escalou.data.status).toBe('WAITING_HUMAN')
+  expect(escalou.data.reply).not.toBeNull()
+
+  // Cliente continua escrevendo enquanto espera. O Sync registra e cala.
+  const depois = await orquestrador.handle(entrada('alo, tem alguem ai?', { customerId: maria.id }))
+  if (!depois.success) throw new Error('falhou')
+
+  expect(depois.data.reply).toBeNull()
+  expect(depois.data.status).toBe('WAITING_HUMAN')
+})
+
+test('com o atendente na conversa o bot nao escreve nem uma vez', async () => {
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const bruno = await prisma.agent.findFirstOrThrow({ where: { email: 'bruno@claro.com.br' } })
+
+  const escalou = await orquestrador.handle(
+    entrada('quero falar com um atendente', { customerId: maria.id }),
+  )
+  if (!escalou.success) throw new Error('falhou')
+
+  await conversas.update(escalou.data.conversationId, {
+    status: 'WITH_HUMAN',
+    claimedAt: new Date(),
+  })
+  await prisma.conversation.update({
+    where: { id: escalou.data.conversationId },
+    data: { assignedAgentId: bruno.id },
+  })
+
+  // Atendente pergunta o nome, cliente responde. Era exatamente aqui que o bot
+  // emendava "vou passar para um atendente" com um atendente ja falando.
+  await mensagens.append({
+    conversationId: escalou.data.conversationId,
+    channel: 'SITE',
+    direction: 'OUTBOUND',
+    sender: 'AGENT',
+    text: 'Olá, pode me informar seu nome?',
+  })
+
+  const resposta = await orquestrador.handle(
+    entrada('Everton Silva, meu problema e com a internet', { customerId: maria.id }),
+  )
+  if (!resposta.success) throw new Error('falhou')
+
+  expect(resposta.data.reply).toBeNull()
+
+  const lista = await mensagens.listByConversation(escalou.data.conversationId)
+  expect(lista.filter((m) => m.sender === 'BOT')).toHaveLength(1)
+  expect(lista.at(-1)?.sender).toBe('CUSTOMER')
+})
+
+test('a mensagem do cliente continua registrada para o atendente ver', async () => {
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+
+  const escalou = await orquestrador.handle(
+    entrada('quero cancelar meu plano', { customerId: maria.id }),
+  )
+  if (!escalou.success) throw new Error('falhou')
+
+  await orquestrador.handle(entrada('e urgente, por favor', { customerId: maria.id }))
+
+  const lista = await mensagens.listByConversation(escalou.data.conversationId)
+  expect(lista.at(-1)?.text).toBe('e urgente, por favor')
+  expect(lista.at(-1)?.sender).toBe('CUSTOMER')
+})
+
+test('o assunto nao muda depois de escalar', async () => {
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+
+  const escalou = await orquestrador.handle(
+    entrada('quero cancelar meu plano', { customerId: maria.id }),
+  )
+  if (!escalou.success) throw new Error('falhou')
+
+  // "obrigado" classificaria como DESCONHECIDA. Se sobrescrevesse, o card do
+  // atendente trocaria de assunto no meio do atendimento.
+  const depois = await orquestrador.handle(entrada('obrigado', { customerId: maria.id }))
+  if (!depois.success) throw new Error('falhou')
+
+  expect(depois.data.intent).toBe('CANCELAMENTO')
+  expect((await conversas.findById(escalou.data.conversationId))?.intent).toBe('CANCELAMENTO')
 })

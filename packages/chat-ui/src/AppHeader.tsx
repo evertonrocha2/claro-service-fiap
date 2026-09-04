@@ -1,6 +1,5 @@
 import { LogIn, LogOut, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { type AppArea, AppSwitcher } from './AppSwitcher.js'
 import { ClaroLogo } from './ClaroLogo.js'
 
 export type AppHeaderIdentity = {
@@ -10,13 +9,18 @@ export type AppHeaderIdentity = {
 }
 
 export type AppHeaderProps = {
-  area: AppArea
   title: string
   identity?: AppHeaderIdentity
   onSignOut?: () => void
   onSignIn?: () => void
-  siteUrl?: string
-  consoleUrl?: string
+  /**
+   * Navegação ao lado do título, se a área tiver alguma.
+   *
+   * Vem por prop porque quem decide não é o cabeçalho. A versão anterior punha
+   * um seletor de área nas duas aplicações, o que colocava um caminho para a
+   * ferramenta interna na tela do cliente. Cliente não tem o que fazer lá.
+   */
+  nav?: ReactNode
   /** Conteúdo extra à direita, como um aviso de estado. */
   aside?: ReactNode
 }
@@ -28,16 +32,7 @@ export type AppHeaderProps = {
  * saía em tamanhos diferentes e a barra tinha alturas diferentes, então trocar de
  * área dava um solavanco. Um componente só elimina a chance de divergirem de novo.
  */
-export function AppHeader({
-  area,
-  title,
-  identity,
-  onSignOut,
-  onSignIn,
-  siteUrl,
-  consoleUrl,
-  aside,
-}: AppHeaderProps) {
+export function AppHeader({ title, identity, onSignOut, onSignIn, nav, aside }: AppHeaderProps) {
   return (
     <header className="appbar">
       <span className="appbar__logo">
@@ -46,7 +41,7 @@ export function AppHeader({
 
       <span className="appbar__title">{title}</span>
 
-      <AppSwitcher current={area} siteUrl={siteUrl} consoleUrl={consoleUrl} />
+      {nav}
 
       <div className="appbar__right">
         {aside}

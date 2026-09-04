@@ -96,8 +96,22 @@ export class ConsoleError extends Error {
   }
 }
 
-async function pedir<T>(caminho: string, token: string | null, init: RequestInit = {}): Promise<T> {
-  const resposta = await fetch(caminho, {
+/**
+ * Renovação sob demanda, registrada pelo hook de sessão.
+ *
+ * Quando uma chamada volta 401, o token é renovado e a chamada repetida uma vez.
+ * Antes só existia a renovação por temporizador, e se ela perdesse a janela, por
+ * suspensão da máquina ou aba em segundo plano, o console travava e dizia "sem
+ * conexão com o servidor", que era falso.
+ */
+let renovar: (() => Promise<string | null>) | null = null
+
+export function registrarRenovacao(fn: (() => Promise<string | null>) | null): void {
+  renovar = fn
+}
+
+async function chamar(caminho: string, token: string | null, init: RequestInit): Promise<Response> {
+  return fetch(caminho, {
     ...init,
     headers: {
       'content-type': 'application/json',
@@ -105,6 +119,17 @@ async function pedir<T>(caminho: string, token: string | null, init: RequestInit
       ...init.headers,
     },
   })
+}
+
+async function pedir<T>(caminho: string, token: string | null, init: RequestInit = {}): Promise<T> {
+  let resposta = await chamar(caminho, token, init)
+
+  // Uma tentativa só. Se a renovação também falhar, a sessão acabou de verdade
+  // e insistir viraria laço.
+  if (resposta.status === 401 && token && renovar) {
+    const novo = await renovar()
+    if (novo) resposta = await chamar(caminho, novo, init)
+  }
 
   const dados = await resposta.json().catch(() => null)
 

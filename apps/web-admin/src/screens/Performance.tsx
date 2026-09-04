@@ -1,5 +1,5 @@
-import { formatWait } from '../api.js'
 import type { AgentPerformance } from '../api.js'
+import { formatWait } from '../api.js'
 
 /**
  * Quadro da equipe, só para gestão.

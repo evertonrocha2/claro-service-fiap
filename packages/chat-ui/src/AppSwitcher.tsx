@@ -1,56 +1,22 @@
-import { ArrowUpRight, Headset, MessagesSquare } from 'lucide-react'
+import { ArrowUpRight, MessagesSquare } from 'lucide-react'
 
 /**
- * Ponte entre o site do cliente e o console da equipe.
+ * Link do console para o site do cliente.
  *
- * Os dois rodam em endereços diferentes e, sem isto, não havia caminho de um para
- * o outro: quem abria um deles não descobria que o outro existia.
+ * Uma via só, e de propósito. A versão anterior era um seletor de duas vias que
+ * aparecia nas duas aplicações, então o cliente via um caminho para a ferramenta
+ * interna da Claro na própria tela de atendimento. A equipe conferir o que o
+ * cliente vê é legítimo; o contrário não é.
  *
- * Os endereços chegam por prop, não de import.meta.env, para o pacote não
- * depender do bundler de quem o usa. Cada aplicação passa o valor do próprio
- * ambiente, o que também serve em produção, onde serão domínios e não localhost.
+ * O endereço chega por prop, não de import.meta.env, para o pacote não depender
+ * do bundler de quem o usa.
  */
-export type AppArea = 'site' | 'console'
-
-export type AppSwitcherProps = {
-  current: AppArea
-  siteUrl?: string
-  consoleUrl?: string
-}
-
-export function AppSwitcher({
-  current,
-  siteUrl = 'http://localhost:5173',
-  consoleUrl = 'http://localhost:5174',
-}: AppSwitcherProps) {
-  const AREAS = [
-    { id: 'site' as const, label: 'Atendimento ao cliente', icon: MessagesSquare, href: siteUrl },
-    { id: 'console' as const, label: 'Console da equipe', icon: Headset, href: consoleUrl },
-  ]
-
+export function CustomerSiteLink({ href = 'http://localhost:5173' }: { href?: string }) {
   return (
-    <nav className="switcher" aria-label="Alternar entre áreas">
-      {AREAS.map((area) => {
-        const Icone = area.icon
-        const aqui = area.id === current
-
-        if (aqui) {
-          return (
-            <span key={area.id} className="switcher__item is-current" aria-current="page">
-              <Icone size={15} strokeWidth={2} />
-              <span>{area.label}</span>
-            </span>
-          )
-        }
-
-        return (
-          <a key={area.id} className="switcher__item" href={area.href}>
-            <Icone size={15} strokeWidth={2} />
-            <span>{area.label}</span>
-            <ArrowUpRight size={13} strokeWidth={2.5} className="switcher__out" />
-          </a>
-        )
-      })}
-    </nav>
+    <a className="site-link" href={href} target="_blank" rel="noreferrer">
+      <MessagesSquare size={15} strokeWidth={2} />
+      <span>Ver site do cliente</span>
+      <ArrowUpRight size={13} strokeWidth={2.5} className="site-link__out" />
+    </a>
   )
 }

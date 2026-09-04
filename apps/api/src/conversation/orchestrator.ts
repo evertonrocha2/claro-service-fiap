@@ -15,7 +15,14 @@ import { decide } from './escalation-policy.js'
 export type HandleResult = {
   conversationId: string
   protocol: string
-  reply: string
+  /**
+   * Nulo quando um humano esta no comando da conversa.
+   *
+   * A partir do escalonamento o Sync cala a boca. Antes ele respondia por cima
+   * do atendente: a pessoa pedia o nome do cliente, o cliente respondia, e o bot
+   * emendava "vou passar para um atendente" com um atendente ja falando ali.
+   */
+  reply: string | null
   intent: Intent
   status: ConversationStatus
   /**
@@ -40,6 +47,9 @@ export type HandleResult = {
  * Documento de Visão: identifica, carrega contexto, classifica, atualiza contexto,
  * decide entre responder ou escalar, devolve pelo canal de origem.
  */
+/** Status em que a conversa pertence a uma pessoa, nao ao bot. */
+const SOB_COMANDO_HUMANO: ConversationStatus[] = ['WAITING_HUMAN', 'WITH_HUMAN']
+
 export class ConversationOrchestrator {
   constructor(
     private readonly identity: IIdentityService,
@@ -86,6 +96,27 @@ export class ConversationOrchestrator {
       confidence: classificacao.confidence,
     })
 
+    const contexto = await this.buildReplyContext(clienteEfetivo)
+
+    // Da escalada em diante quem conduz e a pessoa. O Sync registra a mensagem,
+    // mantem o assunto congelado e nao escreve nada: duas vozes na mesma
+    // conversa se contradizem, e foi o que acontecia.
+    if (SOB_COMANDO_HUMANO.includes(conversa.status)) {
+      const atualizada = await this.conversations.update(conversa.id, {
+        currentChannel: msg.channel,
+        ...(clienteEfetivo && !conversa.customerId ? { customerId: clienteEfetivo.id } : {}),
+      })
+
+      return ok({
+        conversationId: atualizada.id,
+        protocol: atualizada.protocol,
+        reply: null,
+        intent: atualizada.intent ?? classificacao.intent,
+        status: atualizada.status,
+        context: this.buildContextPayload(msg, atualizada, contexto, atualizada.intent),
+      })
+    }
+
     const desconhecidasSeguidas =
       classificacao.intent === 'DESCONHECIDA' ? conversa.consecutiveUnknown + 1 : 0
 
@@ -94,7 +125,6 @@ export class ConversationOrchestrator {
       consecutiveUnknown: desconhecidasSeguidas,
     })
 
-    const contexto = await this.buildReplyContext(clienteEfetivo)
     const resposta =
       decisao.action === 'AUTO_REPLY'
         ? buildAutoReply(decisao.intent, contexto)
@@ -121,26 +151,35 @@ export class ConversationOrchestrator {
       confidence: classificacao.confidence,
     })
 
-    const servicoRelacionado =
-      classificacao.intent === 'PROBLEMA_TECNICO'
-        ? (contexto.services.find((s) => s.type === 'INTERNET_RESIDENCIAL') ?? contexto.services[0])
-        : contexto.services[0]
-
     return ok({
       conversationId: atualizada.id,
       protocol: atualizada.protocol,
       reply: resposta,
       intent: classificacao.intent,
       status,
-      context: {
-        identified: contexto.identified,
-        customerName: contexto.customerName ?? null,
-        channel: msg.channel,
-        originChannel: atualizada.originChannel,
-        intent: classificacao.intent === 'DESCONHECIDA' ? null : classificacao.intent,
-        serviceLabel: contexto.identified ? (servicoRelacionado?.label ?? null) : null,
-      },
+      context: this.buildContextPayload(msg, atualizada, contexto, classificacao.intent),
     })
+  }
+
+  private buildContextPayload(
+    msg: InboundMessage,
+    conversa: Conversation,
+    contexto: ReplyContext,
+    intent: Intent | null,
+  ): HandleResult['context'] {
+    const servicoRelacionado =
+      intent === 'PROBLEMA_TECNICO'
+        ? (contexto.services.find((s) => s.type === 'INTERNET_RESIDENCIAL') ?? contexto.services[0])
+        : contexto.services[0]
+
+    return {
+      identified: contexto.identified,
+      customerName: contexto.customerName ?? null,
+      channel: msg.channel,
+      originChannel: conversa.originChannel,
+      intent: intent === 'DESCONHECIDA' ? null : intent,
+      serviceLabel: contexto.identified ? (servicoRelacionado?.label ?? null) : null,
+    }
   }
 
   private async loadOrCreate(msg: InboundMessage, cliente: Customer | null): Promise<Conversation> {

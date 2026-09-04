@@ -20,6 +20,7 @@ export type UpdateConversationInput = {
   collectedData?: Record<string, unknown>
   consecutiveUnknown?: number
   firstResponseAt?: Date
+  claimedAt?: Date
   resolvedAt?: Date
 }
 
