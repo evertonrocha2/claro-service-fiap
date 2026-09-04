@@ -25,6 +25,7 @@ Este documento é o design técnico derivado dos entregáveis da Sprint 2 (Docum
 | Canais de cliente | 3 apps web: site, app, admin | Escolha explícita do time |
 | WhatsApp | Meta Cloud API real, com adapter mock de fallback | Handoff para o WhatsApp real do avaliador |
 | Transporte tempo real | SSE sobre HTTP | Continua sendo REST; um mecanismo serve chat e admin |
+| Login do cliente | Autenticação real: Argon2id, JWT, refresh com rotação | Identificação de verdade no site e app; sem simulação |
 
 ## 3. Escopo
 
@@ -78,6 +79,7 @@ A raiz do repositório é a pasta atual (`tulipe/`). O nome da pasta não muda n
 │   │   └── src/
 │   │       ├── channels/       normalizer, adapters (site, app, whatsapp), dispatcher
 │   │       ├── gateway/        rotas, middlewares, validação Zod, rate limit
+│   │       ├── auth/           login de cliente e de atendente, JWT, Argon2id
 │   │       ├── identity/       resolução de cliente
 │   │       ├── conversation/   orquestração do diálogo, política de escalonamento
 │   │       ├── nlp/            regras, cliente Gemini, cache, redação de PII
@@ -121,11 +123,12 @@ Passo 9 é o único ponto de decisão. Ele é isolado numa `EscalationPolicy` te
 
 ```prisma
 model Customer {
-  id        String   @id @default(cuid())
-  cpf       String   @unique
-  name      String
-  email     String?
-  phone     String?  @unique   // E.164, chave de identificação no WhatsApp
+  id           String   @id @default(cuid())
+  cpf          String   @unique
+  name         String
+  email        String   @unique
+  passwordHash String?            // null = primeiro acesso ainda não feito
+  phone        String?  @unique   // E.164, chave de identificação no WhatsApp
   services  Service[]
   invoices  Invoice[]
   conversations Conversation[]
@@ -265,7 +268,17 @@ Isolada em `EscalationPolicy.decide(conversation, classification): Decision`. Fu
 
 ### 9.1 Site e App
 
-Chat web com login mockado de conta Claro. Ambos consomem `packages/chat-ui`; muda só a casca visual e o `channel` enviado. O login define `customerId` na sessão, o que cobre o "Já estou logado" do Cenário 1.
+Chat web atrás de autenticação real de cliente. Ambos consomem `packages/chat-ui`; muda só a casca visual e o `channel` enviado.
+
+**Modelo de conta.** A base é semeada com clientes que já existem (CPF, nome, e-mail, serviços, faturas), sem senha. É o mesmo modelo da Claro real: você é cliente antes de ter login. Não há cadastro aberto, porque uma conta criada do zero não teria plano nem fatura para conversar a respeito.
+
+**Primeiro acesso.** O cliente informa CPF e e-mail. Se o par bate com um registro semeado, ele define a senha e `passwordHash` é preenchido.
+
+**Login.** E-mail e senha. Devolve JWT de acesso (15 min) e refresh com rotação. O `customerId` do token vira o identificador da conversa, o que cobre o "Já estou logado" do Cenário 1 sem pedir CPF.
+
+**Chat anônimo.** Continua permitido. Sem token, a conversa começa com `customerId` null e o `identity` resolve por CPF informado no diálogo. É o caminho de quem entra no site sem logar.
+
+O módulo `auth` serve os dois públicos, cliente e atendente, com a mesma mecânica de hash e token. Muda só o repositório consultado e o `role` dentro do JWT.
 
 ### 9.2 WhatsApp
 
@@ -309,7 +322,11 @@ Se o cliente voltar depois sem token (Cenário 3), a identificação é pelo tel
 POST /api/channels/:channel/messages     envia mensagem do cliente
 GET  /api/conversations/:id/stream       SSE com respostas do bot e do atendente
 POST /api/conversations/:id/handoff      gera link de continuidade
-POST /api/auth/mock-login                login simulado de conta Claro
+POST /api/auth/first-access              valida CPF + e-mail e define senha
+POST /api/auth/login                     e-mail e senha, devolve access + refresh
+POST /api/auth/refresh                   rotaciona o refresh token
+POST /api/auth/logout                    revoga a família do refresh
+GET  /api/auth/me                        cliente autenticado, serviços e faturas
 GET  /api/webhooks/whatsapp              verificação da Meta
 POST /api/webhooks/whatsapp              recebimento de mensagens
 ```
@@ -357,7 +374,10 @@ O painel de detalhe reproduz exatamente os campos do Cenário 2: cliente, canal 
 
 ## 13. Segurança e LGPD (RNF001)
 
-- Autenticação de atendente com JWT e hash Argon2
+- Autenticação de cliente e de atendente com JWT e hash Argon2id, no mesmo módulo `auth`
+- Access token de 15 min, refresh com rotação e rastreio de família (reuso de refresh revoga a família inteira)
+- Rate limit agressivo em login e primeiro acesso
+- Mensagens de erro de login não distinguem e-mail inexistente de senha errada, para não permitir enumeração de contas
 - CPF mascarado em log e na interface (`***.456.789-**`)
 - Redação de PII antes de qualquer chamada ao LLM
 - Chave de cache é hash do texto redigido, nunca o texto cru
@@ -371,6 +391,7 @@ O painel de detalhe reproduz exatamente os campos do Cenário 2: cliente, canal 
 |---|---|---|
 | Unitário | Vitest | Regras de intenção, política de escalonamento, normalizador, geração e consumo de token |
 | Integração | Vitest + Supertest + MySQL em Docker | Rotas da API contra banco real |
+| Segurança | Vitest + Supertest | Primeiro acesso com par CPF e e-mail errado, rotação e reuso de refresh token, rate limit, ausência de enumeração de contas |
 | Ponta a ponta | Vitest + Supertest | Os 3 cenários do Documento de Visão |
 | Componente | Vitest + Testing Library | `chat-ui` e telas do admin |
 
@@ -384,14 +405,15 @@ Chamadas de rede (Gemini, Meta) nunca acontecem em teste. Sempre stub.
 |---|---|---|
 | 0 | Monorepo, Docker Compose com MySQL, Prisma schema, seed | `npm run db:seed` popula clientes, serviços e faturas |
 | 1 | Núcleo do backend com classificador de regras apenas | Teste de integração: mensagem entra, intenção sai, contexto grava |
-| 2 | Front do site com chat ponta a ponta | Conversa real no navegador |
-| 3 | Gemini, cache e redação de PII | Teste unitário do pipeline; frase fora das regras classifica certo |
-| 4 | Handoff e WhatsApp real via Meta | Cenário 1 completo no celular |
-| 5 | Painel administrativo | Cenário 2 completo |
-| 6 | Front do app, indicadores, acabamento | Cenário 3 completo |
-| 7 | Os 3 cenários como testes automatizados, deploy | Suíte verde |
+| 2 | Módulo `auth`: primeiro acesso, login, refresh com rotação, para cliente e atendente | Suíte de segurança verde |
+| 3 | Front do site: tela de login real mais chat ponta a ponta | Conversa autenticada real no navegador |
+| 4 | Gemini, cache e redação de PII | Teste unitário do pipeline; frase fora das regras classifica certo |
+| 5 | Handoff e WhatsApp real via Meta | Cenário 1 completo no celular |
+| 6 | Painel administrativo | Cenário 2 completo |
+| 7 | Front do app, indicadores, acabamento | Cenário 3 completo |
+| 8 | Os 3 cenários como testes automatizados, deploy | Suíte verde |
 
-Fase 4 depende de configuração externa (conta de desenvolvedor Meta, número de teste, números de destino cadastrados, túnel HTTPS). Vale começar essa configuração em paralelo à Fase 1, porque tem tempo de espera que não depende de código.
+A Fase 5 depende de configuração externa (conta de desenvolvedor Meta, número de teste, números de destino cadastrados, túnel HTTPS). Vale começar essa configuração em paralelo à Fase 1, porque tem tempo de espera que não depende de código nenhum.
 
 ## 16. Riscos
 
@@ -410,6 +432,6 @@ Estas decisões não estavam nos documentos e foram tomadas aqui. Se alguma esti
 1. Ticket e Conversation são a mesma entidade, diferenciadas por status.
 2. "Suporte de internet" não é intenção própria; é `PROBLEMA_TECNICO` com serviço do tipo internet.
 3. Não existe integração com sistema real da Claro. Clientes, serviços e faturas vêm de uma base semeada nossa.
-4. Login de site e app é mockado, sem senha real.
+4. Não existe cadastro aberto de cliente. A base é semeada e o cliente faz "primeiro acesso" para definir senha, validando CPF e e-mail contra um registro que já existe. Chat sem login continua permitido, com identificação por CPF no diálogo.
 5. SSE atende o requisito de "REST API" do documento, por ser HTTP puro.
 6. Limiar de confiança para escalonar é 0.60 e para aceitar regra é 0.80. Ambos ajustáveis por configuração.
