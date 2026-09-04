@@ -63,18 +63,14 @@ test('telefone invalido e recusado', async () => {
   expect(r.error.code).toBe('TELEFONE_INVALIDO')
 })
 
-test('nao deixa gravar telefone na conversa de outro cliente', async () => {
+test('a sessao que informou o CPF continua podendo gravar o telefone', async () => {
+  // Mesma regra da leitura e do handoff: possuir o id basta. O telefone nao
+  // concede identidade nenhuma, entao nao ha o que proteger alem do id.
   const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  const c = await conversas.create({
-    originChannel: 'SITE',
-    currentChannel: 'SITE',
-    customerId: maria.id,
-  })
+  const c = await anonima()
+  await conversas.update(c.id, { customerId: maria.id })
 
-  const r = await caso.execute(c.id, '(11) 3456-7890')
-  expect(r.success).toBe(false)
-  if (r.success) return
-  expect(r.error.code).toBe('CONVERSA_DE_OUTRO_CLIENTE')
+  expect((await caso.execute(c.id, '(11) 3456-7890')).success).toBe(true)
 })
 
 test('RF005 entre canais: o telefone retoma a conversa do site', async () => {

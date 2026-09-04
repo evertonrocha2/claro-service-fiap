@@ -17,6 +17,27 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
   const [erro, setErro] = useState<string | null>(null)
   const [erroContato, setErroContato] = useState<string | null>(null)
   const [dispensouContato, setDispensouContato] = useState(false)
+  const [gerandoLink, setGerandoLink] = useState(false)
+
+  /**
+   * Abre a continuidade no WhatsApp.
+   *
+   * O link ja vem com o codigo dentro da mensagem, e e ele que amarra a conversa
+   * nova a esta. Abre em outra aba porque no celular o alvo e o aplicativo, e
+   * perder esta pagina apagaria o atendimento da tela.
+   */
+  async function continuarNoWhatsApp() {
+    if (!estado.conversationId) return
+    setGerandoLink(true)
+    try {
+      const { url } = await api.handoff(estado.conversationId, sessao?.accessToken)
+      window.open(url, '_blank', 'noopener')
+    } catch (e) {
+      setErro(e instanceof SyncApiError ? e.message : 'Não foi possível gerar o link.')
+    } finally {
+      setGerandoLink(false)
+    }
+  }
 
   /**
    * O pedido de telefone aparece depois da primeira troca, nunca antes.
@@ -100,7 +121,7 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
         {...(sessao ? {} : { onSignIn: onEntrar })}
       />
 
-      <ContextRail state={estado} />
+      <ContextRail state={estado} onHandoff={continuarNoWhatsApp} handoffBusy={gerandoLink} />
 
       {pedirContato && (
         <ContactPrompt

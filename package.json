@@ -11,7 +11,8 @@
     "start": "npm -w @sync/api run start",
     "dev:site": "npm -w @sync/web-site run dev",
     "dev:all": "npm run dev & npm run dev:site",
-    "dev:admin": "npm -w @sync/web-admin run dev"
+    "dev:admin": "npm -w @sync/web-admin run dev",
+    "dev:zap": "npm -w @sync/web-whatsapp run dev"
   },
   "type": "module",
   "private": true,

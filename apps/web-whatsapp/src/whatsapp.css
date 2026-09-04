@@ -1,0 +1,315 @@
+/*
+  Aparência do WhatsApp, só o suficiente para a demonstração ler como o
+  aplicativo real. Verde do WhatsApp de propósito: a troca de canal precisa ser
+  óbvia na apresentação, e o contraste com o vermelho da Claro é o que faz a
+  continuidade entre canais aparecer.
+*/
+
+:root {
+  --zap-bar: #075e54;
+  --zap-mine: #d9fdd3;
+  --zap-theirs: #ffffff;
+  --zap-bg: #efeae2;
+  --zap-ink: #111b21;
+  --zap-muted: #667781;
+  --zap-line: #e0dbd4;
+  --zap-send: #00a884;
+
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Poppins', system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--zap-ink);
+  background: #d1d7db;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--zap-send);
+  outline-offset: 2px;
+}
+
+/* ---------- pedido do numero ---------- */
+
+.setup {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.setup__card {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 2px 10px rgb(17 27 33 / 0.12);
+}
+
+.setup__badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--zap-bar);
+  background: #e7f3f1;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.setup__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  margin: 0;
+}
+
+.setup__hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--zap-muted);
+}
+
+.setup__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--zap-muted);
+}
+
+.setup__field input {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--zap-ink);
+  padding: 11px 12px;
+  border: 1px solid var(--zap-line);
+  border-radius: 9px;
+  background: #f7f8f9;
+}
+
+.setup__field input:focus-visible {
+  outline: none;
+  border-color: var(--zap-send);
+  background: #fff;
+}
+
+.setup__go {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--zap-send);
+  border: none;
+  border-radius: 9px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.setup__go:hover {
+  background: #029b7b;
+}
+
+/* ---------- conversa ---------- */
+
+.zap {
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--zap-bg);
+}
+
+.zap__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--zap-bar);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.zap__avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #e4032e;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.zap__who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.zap__who strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.zap__who small {
+  font-size: 12px;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.zap__icons {
+  margin-left: auto;
+  display: flex;
+  gap: 18px;
+  color: rgb(255 255 255 / 0.85);
+}
+
+.zap__thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.zap__notice {
+  align-self: center;
+  max-width: 90%;
+  margin: 0 0 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #ffeecd;
+  color: #5c4a1f;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.zap__msg {
+  position: relative;
+  max-width: 82%;
+  padding: 7px 10px 7px 10px;
+  border-radius: 8px;
+  font-size: 14.5px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  box-shadow: 0 1px 1px rgb(17 27 33 / 0.1);
+}
+
+.zap__msg--mine {
+  align-self: flex-end;
+  background: var(--zap-mine);
+  border-top-right-radius: 2px;
+  padding-right: 30px;
+}
+
+.zap__msg--theirs {
+  align-self: flex-start;
+  background: var(--zap-theirs);
+  border-top-left-radius: 2px;
+}
+
+.zap__msg--pending {
+  opacity: 0.6;
+}
+
+.zap__sender {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e4032e;
+  margin-bottom: 2px;
+}
+
+.zap__ticks {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  color: #53bdeb;
+  line-height: 1;
+}
+
+.zap__error {
+  margin: 0 12px 6px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: #ffe3e6;
+  color: #8c1220;
+  font-size: 13px;
+}
+
+.zap__composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 14px;
+  flex-shrink: 0;
+}
+
+.zap__composer input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 11px 15px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--zap-ink);
+}
+
+.zap__composer input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--zap-send);
+}
+
+.zap__composer button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: var(--zap-send);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 130ms ease;
+}
+
+.zap__composer button:hover:not(:disabled) {
+  background: #029b7b;
+}
+
+.zap__composer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -42,8 +42,21 @@ export type PublicConversation = {
  * estivesse salvo. O segundo é mais sério: a resposta do atendente ficava só no
  * console e nunca chegava a quem esperava por ela.
  *
- * Acesso: conversa sem cliente é anônima e o próprio id, que é imprevisível,
- * funciona como segredo. Conversa com cliente exige token daquele cliente.
+ * Acesso: possuir o id da conversa basta para ler.
+ *
+ * O id é um cuid imprevisível, entregue apenas a quem participa dela. Exigir
+ * token do dono parecia mais seguro e quebrava o fluxo principal: quem conversa
+ * anônimo e informa o CPF no meio, que é um caminho previsto no RF002, passava a
+ * ser dono e a própria sessão do site perdia o histórico da tela no instante
+ * seguinte.
+ *
+ * Isto não é a falha do telefone que corrigimos antes. Lá o problema era
+ * escrever identidade: digitar o número de outra pessoa transformava a conversa
+ * em dela. Aqui é só leitura de uma conversa cujo endereço secreto já se tem.
+ *
+ * O que fica em aberto: um id vazado expõe aquela conversa, e apenas ela. Para
+ * produção o caminho é um segredo por conversa com prazo, entregue a quem a
+ * criou. Anotado como dívida consciente.
  */
 export class ReadConversationUseCase {
   constructor(
@@ -52,17 +65,10 @@ export class ReadConversationUseCase {
     private readonly customers: ICustomerRepository,
   ) {}
 
-  async execute(
-    conversationId: string,
-    requesterCustomerId?: string,
-  ): Promise<Result<PublicConversation>> {
+  async execute(conversationId: string): Promise<Result<PublicConversation>> {
     const conversa = await this.conversations.findById(conversationId)
     if (!conversa) {
       return err('CONVERSA_NAO_ENCONTRADA', 'Não encontramos este atendimento.')
-    }
-
-    if (conversa.customerId && conversa.customerId !== requesterCustomerId) {
-      return err('CONVERSA_DE_OUTRO_CLIENTE', 'Este atendimento não é seu.')
     }
 
     const [mensagens, cliente] = await Promise.all([

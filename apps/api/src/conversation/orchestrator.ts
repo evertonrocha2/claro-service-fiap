@@ -9,8 +9,14 @@ import type {
 import type { IIdentityService } from '../identity/identity.service.js'
 import { extractEntities } from '../nlp/pii.js'
 import type { IIntentClassifier } from '../nlp/types.js'
-import { buildAutoReply, buildEscalationReply, type ReplyContext } from './auto-reply.js'
+import {
+  buildAutoReply,
+  buildEscalationReply,
+  buildHandoffReply,
+  type ReplyContext,
+} from './auto-reply.js'
 import { decide } from './escalation-policy.js'
+import type { HandoffUseCase } from './handoff.use-case.js'
 
 export type HandleResult = {
   conversationId: string
@@ -57,9 +63,20 @@ export class ConversationOrchestrator {
     private readonly messages: IMessageRepository,
     private readonly customers: ICustomerRepository,
     private readonly classifier: IIntentClassifier,
+    private readonly handoff?: HandoffUseCase,
   ) {}
 
+  /**
+   * Marca que esta mensagem apenas atravessou de canal.
+   *
+   * "Continuar atendimento SYNC-XXXX" e controle, nao pedido: classificada como
+   * DESCONHECIDA, ela apagava o assunto original e o card do atendente perdia o
+   * motivo do contato justamente na troca de canal.
+   */
+  private veioDeHandoff = false
+
   async handle(msg: InboundMessage): Promise<Result<HandleResult>> {
+    this.veioDeHandoff = false
     const entidades = extractEntities(msg.text)
 
     const cliente = await this.identity.identify({
@@ -98,6 +115,37 @@ export class ConversationOrchestrator {
 
     const contexto = await this.buildReplyContext(clienteEfetivo)
 
+    // A mensagem que atravessa de canal e controle, nao pedido. Responde com a
+    // frase de continuidade e grava o telefone do canal novo, senao a proxima
+    // mensagem do mesmo numero abriria outro atendimento.
+    if (this.veioDeHandoff) {
+      const atualizada = await this.conversations.update(conversa.id, {
+        currentChannel: msg.channel,
+        ...(msg.phone ? { contactPhone: msg.phone } : {}),
+        ...(clienteEfetivo && !conversa.customerId ? { customerId: clienteEfetivo.id } : {}),
+      })
+
+      const resposta = buildHandoffReply(conversa.originChannel, conversa.intent, contexto)
+
+      await this.messages.append({
+        conversationId: conversa.id,
+        channel: msg.channel,
+        direction: 'OUTBOUND',
+        sender: 'BOT',
+        text: resposta,
+        ...(conversa.intent ? { intent: conversa.intent } : {}),
+      })
+
+      return ok({
+        conversationId: atualizada.id,
+        protocol: atualizada.protocol,
+        reply: resposta,
+        intent: atualizada.intent ?? 'DESCONHECIDA',
+        status: atualizada.status,
+        context: this.buildContextPayload(msg, atualizada, contexto, atualizada.intent),
+      })
+    }
+
     // Da escalada em diante quem conduz e a pessoa. O Sync registra a mensagem,
     // mantem o assunto congelado e nao escreve nada: duas vozes na mesma
     // conversa se contradizem, e foi o que acontecia.
@@ -132,8 +180,12 @@ export class ConversationOrchestrator {
 
     const status: ConversationStatus = decisao.action === 'ESCALATE' ? 'WAITING_HUMAN' : 'BOT'
 
+    const assunto = this.veioDeHandoff
+      ? (conversa.intent ?? classificacao.intent)
+      : classificacao.intent
+
     const atualizada = await this.conversations.update(conversa.id, {
-      intent: classificacao.intent,
+      intent: assunto,
       status,
       consecutiveUnknown: desconhecidasSeguidas,
       currentChannel: msg.channel,
@@ -155,9 +207,9 @@ export class ConversationOrchestrator {
       conversationId: atualizada.id,
       protocol: atualizada.protocol,
       reply: resposta,
-      intent: classificacao.intent,
+      intent: assunto,
       status,
-      context: this.buildContextPayload(msg, atualizada, contexto, classificacao.intent),
+      context: this.buildContextPayload(msg, atualizada, contexto, assunto),
     })
   }
 
@@ -183,6 +235,17 @@ export class ConversationOrchestrator {
   }
 
   private async loadOrCreate(msg: InboundMessage, cliente: Customer | null): Promise<Conversation> {
+    // O codigo do link vem antes de tudo. E a intencao explicita do cliente de
+    // continuar aquele atendimento, e vence qualquer heuristica de telefone.
+    const porCodigo = await this.handoff?.consume(msg.text)
+    if (porCodigo) {
+      const retomada = await this.conversations.findById(porCodigo)
+      if (retomada) {
+        this.veioDeHandoff = true
+        return retomada
+      }
+    }
+
     if (msg.conversationId) {
       const porId = await this.conversations.findById(msg.conversationId)
       if (porId) return porId

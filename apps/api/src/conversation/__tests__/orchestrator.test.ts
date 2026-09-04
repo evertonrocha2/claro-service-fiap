@@ -8,6 +8,7 @@ import {
 } from '../../context/index.js'
 import { IdentityService } from '../../identity/identity.service.js'
 import { RuleClassifier } from '../../nlp/rule-classifier.js'
+import { HandoffUseCase } from '../handoff.use-case.js'
 import { ConversationOrchestrator } from '../orchestrator.js'
 
 const conversas = new PrismaConversationRepository(prisma)
@@ -311,4 +312,104 @@ test('o assunto nao muda depois de escalar', async () => {
 
   expect(depois.data.intent).toBe('CANCELAMENTO')
   expect((await conversas.findById(escalou.data.conversationId))?.intent).toBe('CANCELAMENTO')
+})
+
+test('CENARIO 1: site, handoff, WhatsApp, uma conversa so', async () => {
+  const handoff = new HandoffUseCase(prisma, conversas, {
+    driver: 'mock',
+    mockUrl: 'http://localhost:5175',
+  })
+
+  const comHandoff = new ConversationOrchestrator(
+    new IdentityService(clientes, conversas),
+    conversas,
+    mensagens,
+    clientes,
+    new RuleClassifier(),
+    handoff,
+  )
+
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+
+  const noSite = await comHandoff.handle(
+    entrada('minha internet esta caindo', { customerId: maria.id }),
+  )
+  if (!noSite.success) throw new Error('falhou')
+
+  const link = await handoff.create(noSite.data.conversationId)
+  if (!link.success) throw new Error('falhou')
+
+  // Primeira mensagem no WhatsApp: o codigo do link amarra as duas conversas.
+  const primeira = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: `Continuar atendimento ${link.data.code}`,
+    receivedAt: new Date(),
+    phone: '+5511955550001',
+  })
+  if (!primeira.success) throw new Error('falhou')
+
+  expect(primeira.data.protocol).toBe(noSite.data.protocol)
+  expect(primeira.data.context.originChannel).toBe('SITE')
+  expect(primeira.data.context.channel).toBe('WHATSAPP')
+
+  // O assunto sobrevive: a mensagem do link e controle, nao pedido.
+  expect(primeira.data.intent).toBe('PROBLEMA_TECNICO')
+  expect(primeira.data.reply).toContain('Continuando seu atendimento iniciado no site')
+
+  // A segunda mensagem nao carrega codigo nem conversationId. Ela precisa achar
+  // a conversa pelo telefone, que o handoff tem de ter gravado. Sem isso abria
+  // um atendimento novo e a continuidade se perdia na segunda frase.
+  const segunda = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: 'sim, o modem esta com a luz vermelha',
+    receivedAt: new Date(),
+    phone: '+5511955550001',
+  })
+  if (!segunda.success) throw new Error('falhou')
+
+  expect(segunda.data.conversationId).toBe(noSite.data.conversationId)
+  expect(segunda.data.protocol).toBe(noSite.data.protocol)
+
+  const lista = await mensagens.listByConversation(noSite.data.conversationId)
+  expect(lista[0]?.channel).toBe('SITE')
+  expect(lista.at(-1)?.channel).toBe('WHATSAPP')
+})
+
+test('o codigo de handoff nao serve duas vezes', async () => {
+  const handoff = new HandoffUseCase(prisma, conversas, { driver: 'mock' })
+  const comHandoff = new ConversationOrchestrator(
+    new IdentityService(clientes, conversas),
+    conversas,
+    mensagens,
+    clientes,
+    new RuleClassifier(),
+    handoff,
+  )
+
+  const noSite = await comHandoff.handle(entrada('minha internet esta caindo'))
+  if (!noSite.success) throw new Error('falhou')
+
+  const link = await handoff.create(noSite.data.conversationId)
+  if (!link.success) throw new Error('falhou')
+
+  const texto = `Continuar atendimento ${link.data.code}`
+  const primeira = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: texto,
+    receivedAt: new Date(),
+    phone: '+5511955550002',
+  })
+  if (!primeira.success) throw new Error('falhou')
+  expect(primeira.data.protocol).toBe(noSite.data.protocol)
+
+  // Outro numero reapresentando o mesmo codigo nao entra na conversa alheia.
+  const intruso = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: texto,
+    receivedAt: new Date(),
+    phone: '+5511955559999',
+  })
+  if (!intruso.success) throw new Error('falhou')
+
+  expect(intruso.data.protocol).not.toBe(noSite.data.protocol)
 })

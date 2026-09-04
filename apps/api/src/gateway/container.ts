@@ -15,6 +15,7 @@ import {
   PrismaCustomerRepository,
   PrismaMessageRepository,
 } from '../context/index.js'
+import { HandoffUseCase } from '../conversation/handoff.use-case.js'
 import { ConversationOrchestrator } from '../conversation/orchestrator.js'
 import { ReadConversationUseCase } from '../conversation/read-conversation.use-case.js'
 import { SetContactUseCase } from '../conversation/set-contact.use-case.js'
@@ -28,6 +29,9 @@ import type { IIntentClassifier } from '../nlp/types.js'
 
 export type Container = {
   orchestrator: ConversationOrchestrator
+  handoff: HandoffUseCase
+  /** mock aceita a porta local do WhatsApp; meta so aceita o webhook assinado. */
+  whatsappDriver: 'mock' | 'meta'
   readConversation: ReadConversationUseCase
   setContact: SetContactUseCase
   auth: AuthDeps
@@ -36,10 +40,17 @@ export type Container = {
 
 /** Raiz de composição. É o único lugar que instancia implementações concretas. */
 export function buildContainer(): Container {
+  const whatsappDriver = process.env.WHATSAPP_DRIVER === 'meta' ? 'meta' : 'mock'
   const conversations = new PrismaConversationRepository(prisma)
   const messages = new PrismaMessageRepository(prisma)
   const customers = new PrismaCustomerRepository(prisma)
   const identity = new IdentityService(customers, conversations)
+
+  const handoff = new HandoffUseCase(prisma, conversations, {
+    driver: whatsappDriver,
+    ...(process.env.WHATSAPP_FROM_NUMBER ? { fromNumber: process.env.WHATSAPP_FROM_NUMBER } : {}),
+    ...(process.env.WHATSAPP_MOCK_URL ? { mockUrl: process.env.WHATSAPP_MOCK_URL } : {}),
+  })
 
   const agents = new PrismaAgentRepository(prisma)
   const refreshTokens = new PrismaRefreshTokenRepository(prisma)
@@ -52,7 +63,10 @@ export function buildContainer(): Container {
       messages,
       customers,
       buildClassifier(),
+      handoff,
     ),
+    handoff,
+    whatsappDriver,
     readConversation: new ReadConversationUseCase(conversations, messages, customers),
     setContact: new SetContactUseCase(conversations),
     auth: {

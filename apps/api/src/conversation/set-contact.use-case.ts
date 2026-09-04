@@ -26,25 +26,21 @@ import { normalizePhone } from '../identity/phone.js'
  *
  * Para produção, o caminho é confirmar a posse com código enviado por SMS antes
  * de gravar. Fora do escopo deste MVP, e anotado como dívida consciente.
+ *
+ * Acesso: possuir o id da conversa basta, mesma regra da leitura e do handoff.
+ * Como o telefone não concede identidade nenhuma, não há o que proteger além do
+ * próprio id.
  */
 export class SetContactUseCase {
   constructor(private readonly conversations: IConversationRepository) {}
 
-  async execute(
-    conversationId: string,
-    phoneBruto: string,
-    requesterCustomerId?: string,
-  ): Promise<Result<{ phone: string }>> {
+  async execute(conversationId: string, phoneBruto: string): Promise<Result<{ phone: string }>> {
     const normalizado = normalizePhone(phoneBruto)
     if (!normalizado.success) return normalizado
 
     const conversa = await this.conversations.findById(conversationId)
     if (!conversa) {
       return err('CONVERSA_NAO_ENCONTRADA', 'Não encontramos este atendimento.')
-    }
-
-    if (conversa.customerId && conversa.customerId !== requesterCustomerId) {
-      return err('CONVERSA_DE_OUTRO_CLIENTE', 'Este atendimento não é seu.')
     }
 
     const phone = normalizado.data

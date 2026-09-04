@@ -49,6 +49,42 @@ export function buildAutoReply(intent: Intent, ctx: ReplyContext): string {
   }
 }
 
+const NOME_DO_CANAL: Record<string, string> = {
+  SITE: 'no site',
+  APP: 'no aplicativo',
+  WHATSAPP: 'no WhatsApp',
+}
+
+const ASSUNTO: Record<Intent, string> = {
+  FATURA_SEGUNDA_VIA: 'a segunda via da sua fatura',
+  PROBLEMA_TECNICO: 'a instabilidade na sua conexão',
+  CONSULTA_PLANO: 'a consulta do seu plano',
+  CANCELAMENTO: 'o cancelamento do plano',
+  FALAR_COM_ATENDENTE: 'o atendimento com uma pessoa',
+  DESCONHECIDA: 'o seu atendimento',
+}
+
+/**
+ * Primeira fala depois da troca de canal.
+ *
+ * É a frase do Cenário 1 do Documento de Visão, e é onde o produto se prova: em
+ * vez de recomeçar, o Sync diz de onde a conversa veio e o que já sabe. Nada de
+ * classificar o texto do link, que é controle e não pedido.
+ */
+export function buildHandoffReply(
+  originChannel: string,
+  intent: Intent | null,
+  ctx: ReplyContext,
+): string {
+  const origem = NOME_DO_CANAL[originChannel] ?? 'em outro canal'
+  const assunto = ASSUNTO[intent ?? 'DESCONHECIDA']
+
+  const servico = ctx.services.find((s) => s.type === 'INTERNET_RESIDENCIAL') ?? ctx.services[0]
+  const detalhe = ctx.identified && servico ? ` no serviço ${servico.label}` : ''
+
+  return `Olá! Continuando seu atendimento iniciado ${origem}. Já identifiquei que é sobre ${assunto}${detalhe}. Vamos seguir daqui?`
+}
+
 export function buildEscalationReply(reason: EscalationReason): string {
   switch (reason) {
     case 'SENSITIVE_INTENT':

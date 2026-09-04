@@ -61,35 +61,25 @@ test('a resposta do atendente aparece para o cliente', async () => {
   expect(r.data.messages.at(-1)?.sender).toBe('AGENT')
   expect(r.data.messages.at(-1)?.text).toBe('Oi, sou o Bruno. Vi seu caso aqui.')
 })
-
-test('conversa de um cliente exige o token daquele cliente', async () => {
+test('a sessao anonima nao perde a conversa quando o cliente se identifica', async () => {
+  // Caminho previsto no RF002: conversa anonima, cliente informa o CPF no meio e
+  // a conversa passa a ter dono. Exigir token do dono aqui apagava o historico
+  // da tela de quem estava conversando, no instante seguinte.
   const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  const c = await conversas.create({
-    originChannel: 'SITE',
-    currentChannel: 'SITE',
-    customerId: maria.id,
-  })
+  const c = await conversaAnonima()
 
-  const semToken = await caso.execute(c.id)
-  expect(semToken.success).toBe(false)
-  if (semToken.success) return
-  expect(semToken.error.code).toBe('CONVERSA_DE_OUTRO_CLIENTE')
+  await conversas.update(c.id, { customerId: maria.id })
 
-  const comToken = await caso.execute(c.id, maria.id)
-  expect(comToken.success).toBe(true)
+  const r = await caso.execute(c.id)
+  expect(r.success).toBe(true)
+  if (!r.success) return
+  expect(r.data.context.customerName).toBe('Maria Silva')
 })
 
-test('cliente errado não lê a conversa de outro', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  const joao = await prisma.customer.findUniqueOrThrow({ where: { cpf: '98765432100' } })
-  const c = await conversas.create({
-    originChannel: 'SITE',
-    currentChannel: 'SITE',
-    customerId: maria.id,
-  })
-
-  const r = await caso.execute(c.id, joao.id)
-  expect(r.success).toBe(false)
+test('possuir o id e o que da acesso, e id inventado nao existe', async () => {
+  const c = await conversaAnonima()
+  expect((await caso.execute(c.id)).success).toBe(true)
+  expect((await caso.execute('id-que-ninguem-tem')).success).toBe(false)
 })
 
 test('conversa inexistente devolve erro, não estoura', async () => {
@@ -108,7 +98,7 @@ test('o contexto vem junto, para a barra do site continuar preenchida', async ()
   })
   await conversas.update(c.id, { intent: 'PROBLEMA_TECNICO' })
 
-  const r = await caso.execute(c.id, maria.id)
+  const r = await caso.execute(c.id)
   if (!r.success) throw new Error('falhou')
 
   expect(r.data.context.identified).toBe(true)

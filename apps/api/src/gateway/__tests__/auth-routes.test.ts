@@ -139,21 +139,24 @@ test('o cliente lê a própria conversa e vê a resposta do atendente', async ()
   expect(lida.body.messages.at(-1).text).toBe('Aqui é o Bruno. Já vi seu pedido.')
 })
 
-test('conversa de outro cliente devolve 403', async () => {
+test('possuir o id da conversa da acesso de leitura', async () => {
   const { accessToken: token } = await primeiroAcessoELogin()
   const minha = await request(app)
     .post('/api/channels/site/messages')
     .set('Authorization', `Bearer ${token}`)
     .send({ text: 'quero cancelar meu plano' })
 
-  // Sem token, a conversa já tem dono e não pode ser lida.
-  const semToken = await request(app).get(`/api/conversations/${minha.body.conversationId}`)
-  expect(semToken.status).toBe(403)
+  const id = minha.body.conversationId as string
 
-  const comToken = await request(app)
-    .get(`/api/conversations/${minha.body.conversationId}`)
-    .set('Authorization', `Bearer ${token}`)
-  expect(comToken.status).toBe(200)
+  // O id e um cuid imprevisivel, entregue so a quem participa. Exigir token do
+  // dono apagava o historico da tela de quem conversava anonimo e informava o
+  // CPF no meio, que e um caminho previsto no RF002.
+  expect((await request(app).get(`/api/conversations/${id}`)).status).toBe(200)
+
+  expect(
+    (await request(app).get(`/api/conversations/${id}`).set('Authorization', `Bearer ${token}`))
+      .status,
+  ).toBe(200)
 })
 
 test('conversa inexistente devolve 404', async () => {

@@ -5,6 +5,7 @@ import { createAdminRouter } from '../admin/routes.js'
 import { optionalAuth } from '../auth/middleware.js'
 import { createAuthRouter } from '../auth/routes.js'
 import { normalizeWebPayload } from '../channels/normalizer.js'
+import { normalizeWhatsAppPayload } from '../channels/whatsapp-normalizer.js'
 import type { Container } from './container.js'
 
 const contatoSchema = z.object({ phone: z.string().min(8).max(24) })
@@ -29,12 +30,62 @@ export function createApp(deps: Container): Express {
     '/api/conversations/:id',
     optionalAuth(deps.auth.tokens),
     async (req: Request, res: Response) => {
-      const dono = req.auth?.kind === 'CUSTOMER' ? req.auth.subjectId : undefined
-      const r = await deps.readConversation.execute(String(req.params.id), dono)
+      const r = await deps.readConversation.execute(String(req.params.id))
 
       if (!r.success) {
-        const status = r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 403
-        res.status(status).json({ error: r.error })
+        res.status(404).json({ error: r.error })
+        return
+      }
+      res.json(r.data)
+    },
+  )
+
+  /**
+   * Porta do WhatsApp para o driver mock.
+   *
+   * Fora do modo mock ela nao existe. Em modo meta a unica entrada e o webhook
+   * assinado: manter as duas abertas permitiria postar aqui o telefone de outra
+   * pessoa e receber de volta o nome, o servico e a fatura dela.
+   */
+  app.post('/api/channels/whatsapp/messages', async (req: Request, res: Response) => {
+    if (deps.whatsappDriver !== 'mock') {
+      res.status(404).json({
+        error: {
+          code: 'CANAL_INDISPONIVEL',
+          message: 'Em produção o WhatsApp entra apenas pelo webhook da Meta.',
+        },
+      })
+      return
+    }
+
+    const normalizado = normalizeWhatsAppPayload(req.body)
+    if (!normalizado.success) {
+      res.status(400).json({ error: normalizado.error })
+      return
+    }
+
+    try {
+      const resultado = await deps.orchestrator.handle(normalizado.data)
+      if (!resultado.success) {
+        res.status(500).json({ error: resultado.error })
+        return
+      }
+      res.json(resultado.data)
+    } catch {
+      res.status(500).json({
+        error: { code: 'ERRO_INTERNO', message: 'Não foi possível processar a mensagem.' },
+      })
+    }
+  })
+
+  app.post(
+    '/api/conversations/:id/handoff',
+    optionalAuth(deps.auth.tokens),
+    async (req: Request, res: Response) => {
+      const r = await deps.handoff.create(String(req.params.id))
+
+      if (!r.success) {
+        res.status(r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 400).json({ error: r.error })
         return
       }
       res.json(r.data)
@@ -53,17 +104,10 @@ export function createApp(deps: Container): Express {
         return
       }
 
-      const dono = req.auth?.kind === 'CUSTOMER' ? req.auth.subjectId : undefined
-      const r = await deps.setContact.execute(String(req.params.id), corpo.data.phone, dono)
+      const r = await deps.setContact.execute(String(req.params.id), corpo.data.phone)
 
       if (!r.success) {
-        const status =
-          r.error.code === 'CONVERSA_NAO_ENCONTRADA'
-            ? 404
-            : r.error.code === 'CONVERSA_DE_OUTRO_CLIENTE'
-              ? 403
-              : 400
-        res.status(status).json({ error: r.error })
+        res.status(r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 400).json({ error: r.error })
         return
       }
       res.json(r.data)

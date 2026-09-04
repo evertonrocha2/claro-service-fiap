@@ -54,9 +54,10 @@ system classifies by rules alone and nothing breaks.
 Then, in three terminals:
 
 ```bash
-npm run dev          # API            http://localhost:3333
-npm run dev:site     # customer site  http://localhost:5173
-npm run dev:admin    # team console   http://localhost:5174
+npm run dev          # API             http://localhost:3333
+npm run dev:site     # customer site   http://localhost:5173
+npm run dev:admin    # team console    http://localhost:5174
+npm run dev:zap      # WhatsApp mock   http://localhost:5175
 ```
 
 **Seeded logins**
@@ -69,7 +70,7 @@ npm run dev:admin    # team console   http://localhost:5174
 ## Checks
 
 ```bash
-npm test         # 251 tests
+npm test         # 270 tests
 npm run typecheck
 npm run lint
 ```
@@ -97,6 +98,7 @@ apps/
     src/admin/         queue, conversation handling, metrics
   web-site/     customer chat, React 19 + Vite
   web-admin/    team console, React 19 + Vite
+  web-whatsapp/ simulated WhatsApp, React 19 + Vite
 packages/
   contracts/    enums, Result<T> and Zod schemas shared by API and front ends
   chat-ui/      chat components shared across channels
@@ -133,6 +135,22 @@ without first access all return the same error constant.
 token revokes the whole family, including the victim's live token. There is no
 way to tell which of the two parties is legitimate, so both go.
 
+**WhatsApp is simulated, and the architecture is not.** The Technical
+Documentation promised a simulated WhatsApp Business API, and that is what this
+is: a screen that looks like the app talking to the same endpoints, sending
+channel WHATSAPP and a phone number. The back end cannot tell the difference,
+which is the point. Switching `WHATSAPP_DRIVER` from mock to meta swaps the
+inbound adapter and nothing else. In meta mode the mock door returns 404, since
+leaving both open would let anyone post another person's number and receive
+their name, service and invoice back.
+
+**Possessing a conversation id is what grants access to it.** The id is an
+unguessable cuid handed only to a participant. Requiring the owner's token looked
+safer and broke the main flow: someone chatting anonymously who then gives their
+CPF, a path RF002 designs for, became the owner and lost their own history from
+the screen a second later. A leaked id exposes that one conversation; a
+per-conversation secret with an expiry is the production answer.
+
 **Roles are a permission table, not scattered checks.** Two roles exist, agent
 and manager, and what each can do is declared as data in one place. A scattered
 `if (role === ...)` means every forgotten place is a hole. The role is read from
@@ -165,6 +183,6 @@ transparency: people see exactly which of their data the conversation holds.
 Done: channel intake, identification, intent classification, context
 persistence, escalation, customer site, agent console, metrics.
 
-Next: the real WhatsApp handoff through the Meta Cloud API, and the app front
-end. The handoff button is already designed into the context rail and turns on
-when that lands.
+Next: pointing the WhatsApp adapter at the real Meta Cloud API, which needs a
+developer account, a test number and a public HTTPS webhook, and the app front
+end. Everything on this side of that boundary is built and tested.

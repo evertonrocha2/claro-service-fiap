@@ -81,6 +81,13 @@ export const api = {
 
   logout: (refreshToken: string) => post<{ ok: true }>('/api/auth/logout', { refreshToken }),
 
+  handoff: (id: string, token?: string) =>
+    post<{ code: string; url: string; expiresAt: string }>(
+      `/api/conversations/${id}/handoff`,
+      {},
+      token,
+    ),
+
   setContact: (id: string, phone: string, token?: string) =>
     post<{ phone: string }>(`/api/conversations/${id}/contact`, { phone }, token),
 
