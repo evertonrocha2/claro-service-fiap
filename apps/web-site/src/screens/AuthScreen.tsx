@@ -166,6 +166,30 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
           <button className="btn btn--ghost" type="button" onClick={onSkip}>
             Continuar sem identificação
           </button>
+
+          {/* Nao existe cadastro aberto: a base de clientes vem semeada, porque
+              uma conta criada do zero nao teria plano nem fatura sobre o que
+              conversar. Sem esta lista quem abre a tela tenta o proprio CPF e
+              leva "nao encontramos um cadastro", que esta correto e parece bug. */}
+          <div className="auth__demo">
+            <strong className="auth__demo-title">Contas desta demonstração</strong>
+
+            <dl className="auth__demo-list">
+              <dt>Maria Silva</dt>
+              <dd>
+                CPF 123.456.789-00
+                <span>maria.silva@exemplo.com</span>
+              </dd>
+
+              <dt>João Pereira</dt>
+              <dd>
+                CPF 987.654.321-00
+                <span>joao.pereira@exemplo.com</span>
+              </dd>
+            </dl>
+
+            <p className="auth__demo-note">No primeiro acesso você define a senha.</p>
+          </div>
         </form>
       </section>
     </div>

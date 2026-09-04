@@ -330,8 +330,21 @@
   grid-template-columns: 30px minmax(0, 1fr);
 }
 
+.ctx__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ctx__foot:not(:empty) {
+  margin-top: 12px;
+}
+
 .ctx__note {
-  margin: 12px 0 0;
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink-muted);
@@ -346,7 +359,10 @@
 }
 
 .ctx__handoff {
-  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
   border: 1.5px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -361,6 +377,19 @@
 
 .ctx__handoff:hover:not(:disabled) {
   border-color: var(--claro-red);
+}
+
+/* Com atendente na linha, trocar de canal deixa de ser opcao lateral e passa a
+   ser a acao que a pessoa procura. */
+.ctx__handoff.is-primary {
+  border-color: var(--claro-red);
+  background: var(--claro-red);
+  color: #fff;
+}
+
+.ctx__handoff.is-primary:hover:not(:disabled) {
+  background: var(--claro-deep);
+  border-color: var(--claro-deep);
 }
 
 .ctx__handoff:disabled {

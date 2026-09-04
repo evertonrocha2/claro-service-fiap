@@ -1,11 +1,11 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
+import type { TokenSubject } from '../../auth/tokens.js'
 import {
   PrismaConversationRepository,
   PrismaCustomerRepository,
   PrismaMessageRepository,
 } from '../../context/index.js'
-import type { TokenSubject } from '../../auth/tokens.js'
 import { assertPodeAcessar } from '../access.js'
 import { HandoffUseCase } from '../handoff.use-case.js'
 import { ReadConversationUseCase } from '../read-conversation.use-case.js'

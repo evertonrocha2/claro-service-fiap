@@ -85,6 +85,38 @@ export function buildHandoffReply(
   return `Olá! Continuando seu atendimento iniciado ${origem}. Já identifiquei que é sobre ${assunto}${detalhe}. Vamos seguir daqui?`
 }
 
+/**
+ * Chegada no canal novo quando ja existe atendente na conversa.
+ *
+ * Separada de buildHandoffReply porque a outra diz "vamos seguir daqui?", e essa
+ * frase, com uma pessoa ja conduzindo, e o bot roubando o turno de volta. Aqui o
+ * texto so confirma que e o mesmo atendimento e devolve a palavra ao atendente.
+ *
+ * Ficar em silencio total tambem nao serve: a pessoa abre o WhatsApp, envia o
+ * codigo e nao recebe nada, sem saber se funcionou.
+ */
+export function buildHandoffHumanReply(
+  originChannel: string,
+  intent: Intent | null,
+  ctx: ReplyContext,
+): string {
+  const origem = NOME_DO_CANAL[originChannel] ?? 'em outro canal'
+
+  const servico = ctx.services.find((s) => s.type === 'INTERNET_RESIDENCIAL') ?? ctx.services[0]
+
+  // "sobre o atendimento com uma pessoa" nao informa nada, e e justamente a
+  // intencao mais comum neste caminho: quem pede atendente cai nela. Sem assunto
+  // util a frase diz so a origem, que e o que importa.
+  const semAssuntoUtil =
+    intent === null || intent === 'DESCONHECIDA' || intent === 'FALAR_COM_ATENDENTE'
+
+  const partes = [`Este é o mesmo atendimento iniciado ${origem}`]
+  if (!semAssuntoUtil) partes.push(`sobre ${ASSUNTO[intent]}`)
+  if (ctx.identified && servico) partes.push(`no serviço ${servico.label}`)
+
+  return `${partes.join(', ')}. O atendente que já está com você segue por aqui.`
+}
+
 export function buildEscalationReply(reason: EscalationReason): string {
   switch (reason) {
     case 'SENSITIVE_INTENT':

@@ -108,17 +108,36 @@ export function ContextRail({ state, onHandoff, handoffBusy }: ContextRailProps)
         )}
       </ul>
 
-      {escalado && (
-        <p className="ctx__note ctx__note--escalated">
-          Um atendente assume a partir daqui e recebe esta conversa completa.
-        </p>
-      )}
+      {/* Aviso e acao dividem a linha. Empilhados ocupavam duas faixas inteiras
+          acima da conversa, e o botao ficava orfao no canto esquerdo. */}
+      <div className="ctx__foot">
+        {escalado && (
+          <p className="ctx__note ctx__note--escalated">
+            Um atendente assume a partir daqui e recebe esta conversa completa.
+          </p>
+        )}
 
-      {onHandoff && state.conversationId && !escalado && (
-        <button type="button" className="ctx__handoff" onClick={onHandoff} disabled={handoffBusy}>
-          {handoffBusy ? 'Gerando link' : 'Continuar no WhatsApp'}
-        </button>
-      )}
+        {/* Aparece tambem depois da escalada, e principalmente ali.
+          Escondia-lo com atendente na linha matava o cenario principal do
+          projeto: sair do site e continuar a MESMA conversa, com a MESMA pessoa,
+          no WhatsApp. Sem isso o botao so existia enquanto a conversa era com o
+          bot, que e justamente quando trocar de canal importa menos. */}
+        {onHandoff && state.conversationId && (
+          <button
+            type="button"
+            className={`ctx__handoff ${escalado ? 'is-primary' : ''}`}
+            onClick={onHandoff}
+            disabled={handoffBusy}
+          >
+            <MessageCircleMore size={15} strokeWidth={2.2} aria-hidden="true" />
+            {handoffBusy
+              ? 'Gerando link'
+              : escalado
+                ? 'Continuar com o atendente no WhatsApp'
+                : 'Continuar no WhatsApp'}
+          </button>
+        )}
+      </div>
     </section>
   )
 }

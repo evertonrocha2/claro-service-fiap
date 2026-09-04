@@ -413,3 +413,63 @@ test('o codigo de handoff nao serve duas vezes', async () => {
 
   expect(intruso.data.protocol).not.toBe(noSite.data.protocol)
 })
+
+test('handoff com atendente na linha: o bot confirma o canal e nao assume a conversa', async () => {
+  // Este e o caminho que se usa de verdade na apresentacao: a pessoa pede
+  // atendente, o atendente responde, e SO ENTAO ela quer levar a conversa para o
+  // WhatsApp. O botao de handoff ficava escondido nesse estado, e a frase de
+  // chegada era "vamos seguir daqui?", com o bot roubando o turno de volta.
+  const handoff = new HandoffUseCase(prisma, conversas, {
+    driver: 'mock',
+    mockUrl: 'http://localhost:5175',
+  })
+
+  const comHandoff = new ConversationOrchestrator(
+    new IdentityService(clientes, conversas),
+    conversas,
+    mensagens,
+    clientes,
+    new RuleClassifier(),
+    handoff,
+  )
+
+  const noSite = await comHandoff.handle(entrada('quero falar com um atendente'))
+  if (!noSite.success) throw new Error('falhou')
+  expect(noSite.data.status).toBe('WAITING_HUMAN')
+
+  await conversas.update(noSite.data.conversationId, { status: 'WITH_HUMAN' })
+
+  // O link tem de sair mesmo com a conversa nas maos do atendente.
+  const link = await handoff.create(noSite.data.conversationId)
+  expect(link.success).toBe(true)
+  if (!link.success) return
+
+  const noZap = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: `Continuar atendimento ${link.data.code}`,
+    receivedAt: new Date(),
+    phone: '+5511955550009',
+  })
+  if (!noZap.success) throw new Error('falhou')
+
+  // Mesmo atendimento, canal novo, atendente ainda no comando.
+  expect(noZap.data.protocol).toBe(noSite.data.protocol)
+  expect(noZap.data.context.channel).toBe('WHATSAPP')
+  expect(noZap.data.status).toBe('WITH_HUMAN')
+
+  // Confirma a troca sem convidar a pessoa a conversar com o bot.
+  expect(noZap.data.reply).toContain('mesmo atendimento')
+  expect(noZap.data.reply).toContain('atendente que já está com você')
+  expect(noZap.data.reply).not.toContain('Vamos seguir daqui')
+
+  // E a mensagem seguinte, sem codigo, cai no silencio do bot como antes.
+  const seguinte = await comHandoff.handle({
+    channel: 'WHATSAPP',
+    text: 'ainda esta lenta',
+    receivedAt: new Date(),
+    phone: '+5511955550009',
+  })
+  if (!seguinte.success) throw new Error('falhou')
+  expect(seguinte.data.reply).toBeNull()
+  expect(seguinte.data.protocol).toBe(noSite.data.protocol)
+})

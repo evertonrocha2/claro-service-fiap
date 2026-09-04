@@ -12,6 +12,7 @@ import type { IIntentClassifier } from '../nlp/types.js'
 import {
   buildAutoReply,
   buildEscalationReply,
+  buildHandoffHumanReply,
   buildHandoffReply,
   type ReplyContext,
 } from './auto-reply.js'
@@ -125,7 +126,11 @@ export class ConversationOrchestrator {
         ...(clienteEfetivo && !conversa.customerId ? { customerId: clienteEfetivo.id } : {}),
       })
 
-      const resposta = buildHandoffReply(conversa.originChannel, conversa.intent, contexto)
+      // Com atendente na linha a frase muda: quem conduz continua sendo a
+      // pessoa, e o bot so confirma a troca de canal.
+      const resposta = SOB_COMANDO_HUMANO.includes(conversa.status)
+        ? buildHandoffHumanReply(conversa.originChannel, conversa.intent, contexto)
+        : buildHandoffReply(conversa.originChannel, conversa.intent, contexto)
 
       await this.messages.append({
         conversationId: conversa.id,
