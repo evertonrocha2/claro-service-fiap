@@ -83,6 +83,10 @@ export function createAdminRouter(deps: AdminDeps): Router {
     responder(res, await deps.service.reply(String(req.params.id), agentId, corpo.data.text))
   })
 
+  router.post('/conversations/:id/offer', async (req: Request, res: Response) => {
+    responder(res, await deps.service.refreshOffer(String(req.params.id)))
+  })
+
   router.post('/conversations/:id/resolve', async (req: Request, res: Response) => {
     responder(res, await deps.service.resolve(String(req.params.id)))
   })

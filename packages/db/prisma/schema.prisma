@@ -68,6 +68,7 @@ model Customer {
   services      Service[]
   invoices      Invoice[]
   conversations Conversation[]
+  offerInsights OfferInsight[]
 
   createdAt DateTime @default(now())
 }
@@ -115,6 +116,13 @@ model Conversation {
   stage              String             @default("GREETING")
   collectedData      Json?
   consecutiveUnknown Int                @default(0)
+
+  /// Telefone informado no chat, em E.164.
+  ///
+  /// É o que liga a conversa do site ao WhatsApp: quando chega mensagem daquele
+  /// número, o atendimento é retomado em vez de recomeçar. Fica na conversa e
+  /// não só no cliente, porque atendimento anônimo também precisa continuar.
+  contactPhone       String?
   assignedAgentId    String?
 
   createdAt       DateTime  @default(now())
@@ -127,11 +135,13 @@ model Conversation {
   agent         Agent?         @relation(fields: [assignedAgentId], references: [id])
   messages      Message[]
   handoffTokens HandoffToken[]
+  offerInsights OfferInsight[]
 
   @@index([customerId, status])
   @@index([status, updatedAt])
   @@index([serviceId])
   @@index([assignedAgentId])
+  @@index([contactPhone, status])
 }
 
 model Message {
@@ -206,4 +216,39 @@ model RefreshToken {
 enum SubjectKind {
   CUSTOMER
   AGENT
+}
+
+/// Sugestão de oferta gerada para um cliente.
+///
+/// O atendente pega um cancelamento e precisa decidir o que oferecer em
+/// segundos. Isto é a leitura do cadastro, dos serviços, das faturas e do
+/// histórico de intenções, resolvida antes da conversa começar.
+model OfferInsight {
+  id             String   @id @default(cuid())
+  customerId     String
+  conversationId String?
+
+  headline       String
+  rationale      String   @db.Text
+  offerKind      OfferKind
+  confidence     Float
+  /// RULES quando saiu da leitura local, LLM quando o modelo escreveu.
+  source         String
+
+  createdAt      DateTime @default(now())
+
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@index([customerId, createdAt])
+  @@index([conversationId])
+}
+
+enum OfferKind {
+  RETENCAO
+  UPGRADE
+  DESCONTO
+  SUPORTE_TECNICO
+  NEGOCIACAO_FATURA
+  NENHUMA
 }

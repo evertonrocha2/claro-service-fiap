@@ -20,8 +20,28 @@ export type QueueItem = {
   assignedAgentName: string | null
 }
 
+export type OfferSuggestion = {
+  headline: string
+  rationale: string
+  offerKind: string
+  confidence: number
+  source: string
+  createdAt: string
+}
+
+export const OFFER_LABELS: Record<string, string> = {
+  RETENCAO: 'Retenção',
+  UPGRADE: 'Upgrade',
+  DESCONTO: 'Desconto',
+  SUPORTE_TECNICO: 'Suporte técnico',
+  NEGOCIACAO_FATURA: 'Negociação de fatura',
+  NENHUMA: 'Sem oferta',
+}
+
 export type ConversationDetail = QueueItem & {
   assignedAgentId: string | null
+  customerPhone: string | null
+  offer: OfferSuggestion | null
   customerCpfMasked: string | null
   customerEmail: string | null
   messages: {
@@ -111,6 +131,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text }),
     }),
+
+  refreshOffer: (token: string, id: string) =>
+    pedir<{ ok: true }>(`/api/admin/conversations/${id}/offer`, token, { method: 'POST' }),
 
   resolve: (token: string, id: string) =>
     pedir<{ ok: true }>(`/api/admin/conversations/${id}/resolve`, token, { method: 'POST' }),

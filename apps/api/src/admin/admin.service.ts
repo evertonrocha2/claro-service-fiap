@@ -1,7 +1,8 @@
 import type { Channel, ConversationStatus, Intent, Result } from '@sync/contracts'
 import { err, ok } from '@sync/contracts'
 import type { PrismaClient } from '@sync/db'
-import type { IMessageRepository } from '../context/index.js'
+import type { ICustomerRepository, IMessageRepository } from '../context/index.js'
+import type { OfferInsightService } from '../insights/offer-insight.service.js'
 
 export type QueueFilters = {
   status?: ConversationStatus
@@ -23,10 +24,22 @@ export type QueueItem = {
   assignedAgentName: string | null
 }
 
+export type OfferSuggestion = {
+  headline: string
+  rationale: string
+  offerKind: string
+  confidence: number
+  source: string
+  createdAt: Date
+}
+
 export type ConversationDetail = QueueItem & {
   assignedAgentId: string | null
   customerCpfMasked: string | null
   customerEmail: string | null
+  customerPhone: string | null
+  /** Sugestão de oferta, quando já houver uma para este atendimento. */
+  offer: OfferSuggestion | null
   messages: {
     id: string
     sender: 'CUSTOMER' | 'BOT' | 'AGENT'
@@ -66,6 +79,8 @@ export class AdminService {
   constructor(
     private readonly db: PrismaClient,
     private readonly messages: IMessageRepository,
+    private readonly offers?: OfferInsightService,
+    private readonly customers?: ICustomerRepository,
   ) {}
 
   async queue(filters: QueueFilters, now = new Date()): Promise<QueueItem[]> {
@@ -112,7 +127,10 @@ export class AdminService {
     })
     if (!c) return err('ATENDIMENTO_NAO_ENCONTRADO', 'Este atendimento não existe.')
 
-    const mensagens = await this.messages.listByConversation(id)
+    const [mensagens, oferta] = await Promise.all([
+      this.messages.listByConversation(id),
+      this.offers?.latestForConversation(id) ?? null,
+    ])
 
     return ok({
       id: c.id,
@@ -120,6 +138,17 @@ export class AdminService {
       customerName: c.customer?.name ?? null,
       customerCpfMasked: c.customer ? maskCpf(c.customer.cpf) : null,
       customerEmail: c.customer?.email ?? null,
+      customerPhone: c.customer?.phone ?? c.contactPhone ?? null,
+      offer: oferta
+        ? {
+            headline: oferta.headline,
+            rationale: oferta.rationale,
+            offerKind: oferta.offerKind,
+            confidence: oferta.confidence,
+            source: oferta.source,
+            createdAt: oferta.createdAt,
+          }
+        : null,
       channel: c.currentChannel,
       originChannel: c.originChannel,
       intent: c.intent,
@@ -149,7 +178,50 @@ export class AdminService {
     if (atualizados.count === 0) {
       return err('ATENDIMENTO_JA_ASSUMIDO', 'Outro atendente assumiu este atendimento.')
     }
+
+    await this.gerarSugestao(id)
     return ok({ ok: true })
+  }
+
+  /**
+   * Monta a sugestão de oferta no instante em que o atendente assume.
+   *
+   * É quando ela serve: a pessoa acabou de abrir uma conversa de cancelamento e
+   * tem segundos para decidir o que oferecer. Gerar antes gastaria chamada em
+   * atendimento que a IA ia resolver sozinha.
+   *
+   * Falha aqui não bloqueia o atendimento. Sem cliente identificado também não
+   * há o que sugerir, e isso não é erro.
+   */
+  private async gerarSugestao(conversationId: string): Promise<void> {
+    if (!this.offers || !this.customers) return
+
+    const conversa = await this.db.conversation.findUnique({ where: { id: conversationId } })
+    if (!conversa?.customerId) return
+
+    const cliente = await this.customers.findWithContext(conversa.customerId)
+    if (!cliente) return
+
+    await this.offers.generate(cliente, conversationId)
+  }
+
+  /** Recalcula a sugestão a pedido do atendente. */
+  async refreshOffer(conversationId: string): Promise<Result<{ ok: true }>> {
+    if (!this.offers || !this.customers) {
+      return err('SUGESTAO_INDISPONIVEL', 'Sugestão de oferta não está configurada.')
+    }
+
+    const conversa = await this.db.conversation.findUnique({ where: { id: conversationId } })
+    if (!conversa) return err('ATENDIMENTO_NAO_ENCONTRADO', 'Este atendimento não existe.')
+    if (!conversa.customerId) {
+      return err('CLIENTE_NAO_IDENTIFICADO', 'Identifique o cliente para gerar uma sugestão.')
+    }
+
+    const cliente = await this.customers.findWithContext(conversa.customerId)
+    if (!cliente) return err('CLIENTE_NAO_IDENTIFICADO', 'Cliente não encontrado.')
+
+    const r = await this.offers.generate(cliente, conversationId)
+    return r.success ? ok({ ok: true }) : r
   }
 
   async reply(id: string, agentId: string, text: string): Promise<Result<{ ok: true }>> {

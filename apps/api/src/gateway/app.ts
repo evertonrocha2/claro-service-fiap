@@ -1,10 +1,13 @@
 import { CHANNELS, type Channel } from '@sync/contracts'
 import express, { type Express, type Request, type Response } from 'express'
+import { z } from 'zod'
 import { createAdminRouter } from '../admin/routes.js'
 import { optionalAuth } from '../auth/middleware.js'
 import { createAuthRouter } from '../auth/routes.js'
 import { normalizeWebPayload } from '../channels/normalizer.js'
 import type { Container } from './container.js'
+
+const contatoSchema = z.object({ phone: z.string().min(8).max(24) })
 
 function parseChannel(raw: string): Channel | null {
   const upper = raw.toUpperCase()
@@ -31,6 +34,35 @@ export function createApp(deps: Container): Express {
 
       if (!r.success) {
         const status = r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 403
+        res.status(status).json({ error: r.error })
+        return
+      }
+      res.json(r.data)
+    },
+  )
+
+  app.post(
+    '/api/conversations/:id/contact',
+    optionalAuth(deps.auth.tokens),
+    async (req: Request, res: Response) => {
+      const corpo = contatoSchema.safeParse(req.body)
+      if (!corpo.success) {
+        res
+          .status(400)
+          .json({ error: { code: 'PAYLOAD_INVALIDO', message: 'Informe o telefone.' } })
+        return
+      }
+
+      const dono = req.auth?.kind === 'CUSTOMER' ? req.auth.subjectId : undefined
+      const r = await deps.setContact.execute(String(req.params.id), corpo.data.phone, dono)
+
+      if (!r.success) {
+        const status =
+          r.error.code === 'CONVERSA_NAO_ENCONTRADA'
+            ? 404
+            : r.error.code === 'CONVERSA_DE_OUTRO_CLIENTE'
+              ? 403
+              : 400
         res.status(status).json({ error: r.error })
         return
       }

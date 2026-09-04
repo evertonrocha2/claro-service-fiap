@@ -154,10 +154,19 @@ export class ConversationOrchestrator {
       if (aberta) return aberta
     }
 
+    // Chegou do WhatsApp e o numero bate com um atendimento aberto do site.
+    // E aqui que o RF005 acontece entre canais para quem nao fez login: o
+    // telefone informado no chat e a unica ponte que os dois canais dividem.
+    if (msg.phone) {
+      const porTelefone = await this.conversations.findOpenByPhone(msg.phone)
+      if (porTelefone) return porTelefone
+    }
+
     return this.conversations.create({
       originChannel: msg.channel,
       currentChannel: msg.channel,
       ...(cliente ? { customerId: cliente.id } : {}),
+      ...(msg.phone ? { contactPhone: msg.phone } : {}),
     })
   }
 

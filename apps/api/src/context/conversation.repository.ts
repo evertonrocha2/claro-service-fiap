@@ -6,10 +6,12 @@ export type CreateConversationInput = {
   originChannel: Channel
   currentChannel: Channel
   customerId?: string
+  contactPhone?: string
 }
 
 export type UpdateConversationInput = {
   customerId?: string
+  contactPhone?: string
   currentChannel?: Channel
   intent?: Intent
   serviceId?: string
@@ -25,6 +27,8 @@ export interface IConversationRepository {
   findById(id: string): Promise<Conversation | null>
   findByProtocol(protocol: string): Promise<Conversation | null>
   findOpenByCustomer(customerId: string): Promise<Conversation | null>
+  /** Conversa aberta ligada ao telefone informado no chat, de qualquer canal. */
+  findOpenByPhone(phone: string): Promise<Conversation | null>
   create(input: CreateConversationInput): Promise<Conversation>
   update(id: string, patch: UpdateConversationInput): Promise<Conversation>
 }
@@ -46,6 +50,13 @@ export class PrismaConversationRepository implements IConversationRepository {
   findOpenByCustomer(customerId: string): Promise<Conversation | null> {
     return this.db.conversation.findFirst({
       where: { customerId, status: { not: 'RESOLVED' } },
+      orderBy: { updatedAt: 'desc' },
+    })
+  }
+
+  findOpenByPhone(phone: string): Promise<Conversation | null> {
+    return this.db.conversation.findFirst({
+      where: { contactPhone: phone, status: { not: 'RESOLVED' } },
       orderBy: { updatedAt: 'desc' },
     })
   }

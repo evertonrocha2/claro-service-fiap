@@ -1,4 +1,4 @@
-import { AppHeader, ChatComposer, ChatTranscript, ContextRail } from '@sync/chat-ui'
+import { AppHeader, ChatComposer, ChatTranscript, ContactPrompt, ContextRail } from '@sync/chat-ui'
 import { useState } from 'react'
 import { api, type Session, SyncApiError } from '../api.js'
 import { useConversation } from '../useConversation.js'
@@ -15,6 +15,34 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
 
   const [aguardando, setAguardando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [erroContato, setErroContato] = useState<string | null>(null)
+  const [dispensouContato, setDispensouContato] = useState(false)
+
+  /**
+   * O pedido de telefone aparece depois da primeira troca, nunca antes.
+   *
+   * Cobrar o dado na porta transformaria o atendimento em cadastro. Depois da
+   * primeira resposta a pessoa já viu utilidade, e o pedido faz sentido. Quem
+   * está logado não vê: o cadastro dela já tem o número.
+   */
+  const pedirContato =
+    !sessao &&
+    !dispensouContato &&
+    estado.conversationId !== null &&
+    estado.context?.identified !== true &&
+    mensagens.length >= 2
+
+  async function salvarContato(telefone: string) {
+    if (!estado.conversationId) return
+    setErroContato(null)
+    try {
+      await api.setContact(estado.conversationId, telefone, sessao?.accessToken)
+      setDispensouContato(true)
+      await sincronizar()
+    } catch (e) {
+      setErroContato(e instanceof SyncApiError ? e.message : 'Não foi possível salvar o telefone.')
+    }
+  }
 
   async function enviar(texto: string) {
     setErro(null)
@@ -70,6 +98,14 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
       />
 
       <ContextRail state={estado} />
+
+      {pedirContato && (
+        <ContactPrompt
+          onSubmit={salvarContato}
+          onSkip={() => setDispensouContato(true)}
+          error={erroContato}
+        />
+      )}
 
       <main className="conversation">
         <ChatTranscript messages={mensagens} waiting={aguardando} emptyMessage={vazio} />

@@ -171,6 +171,20 @@ async function main() {
   await sleep(2200)
   await cdp.shot('6-chat-escalado')
 
+  // Caminho anonimo: e nele que o pedido de telefone aparece, depois da
+  // primeira troca. Quem esta logado nao ve, porque o cadastro ja tem o numero.
+  await cdp.eval('localStorage.clear(); true')
+  await cdp.send('Page.reload')
+  await sleep(2500)
+  await cdp.eval(CLICAR_TEXTO('Continuar sem identificacao'))
+    .catch(() => cdp.eval(CLICAR_TEXTO('Continuar sem')))
+  await sleep(1500)
+  await cdp.eval(PREENCHER('textarea', 'minha internet esta caindo toda hora'))
+  await sleep(200)
+  await cdp.eval(CLICAR_TEXTO('↑'))
+  await sleep(2500)
+  await cdp.shot('7-pede-telefone')
+
   ws.close()
 }
 

@@ -16,7 +16,9 @@ import {
 } from '../context/index.js'
 import { ConversationOrchestrator } from '../conversation/orchestrator.js'
 import { ReadConversationUseCase } from '../conversation/read-conversation.use-case.js'
+import { SetContactUseCase } from '../conversation/set-contact.use-case.js'
 import { IdentityService } from '../identity/identity.service.js'
+import { GeminiOfferWriter, OfferInsightService } from '../insights/offer-insight.service.js'
 import { GeminiClassifier } from '../nlp/gemini-classifier.js'
 import { HybridClassifier } from '../nlp/hybrid-classifier.js'
 import { PrismaIntentCacheRepository } from '../nlp/intent-cache.repository.js'
@@ -26,6 +28,7 @@ import type { IIntentClassifier } from '../nlp/types.js'
 export type Container = {
   orchestrator: ConversationOrchestrator
   readConversation: ReadConversationUseCase
+  setContact: SetContactUseCase
   auth: AuthDeps
   admin: AdminDeps
 }
@@ -49,6 +52,7 @@ export function buildContainer(): Container {
       buildClassifier(),
     ),
     readConversation: new ReadConversationUseCase(conversations, messages, customers),
+    setContact: new SetContactUseCase(conversations, customers),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
       login: new LoginUseCase(customers, refreshTokens, tokens, new PrismaAgentRepository(prisma)),
@@ -57,10 +61,25 @@ export function buildContainer(): Container {
       tokens,
     },
     admin: {
-      service: new AdminService(prisma, messages),
+      service: new AdminService(prisma, messages, buildOfferService(messages), customers),
       tokens,
     },
   }
+}
+
+/**
+ * A sugestao de oferta usa o mesmo criterio do classificador: as regras sempre
+ * produzem algo, e o modelo entra apenas quando ha chave para chama-lo.
+ */
+function buildOfferService(messages: PrismaMessageRepository): OfferInsightService {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return new OfferInsightService(prisma, messages)
+
+  return new OfferInsightService(
+    prisma,
+    messages,
+    new GeminiOfferWriter(apiKey, process.env.GEMINI_MODEL),
+  )
 }
 
 /**

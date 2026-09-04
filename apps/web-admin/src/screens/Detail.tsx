@@ -1,4 +1,4 @@
-import { CircleCheck, Hand, MousePointerClick, Send } from 'lucide-react'
+import { CircleCheck, Hand, Lightbulb, MousePointerClick, RefreshCw, Send } from 'lucide-react'
 import { useState } from 'react'
 import {
   api,
@@ -7,6 +7,7 @@ import {
   type ConversationDetail,
   formatWait,
   INTENT_COLUMNS,
+  OFFER_LABELS,
   STATUS_LABELS,
 } from '../api.js'
 
@@ -86,6 +87,13 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
           <span className="fact__label">Tempo de espera</span>
           <span className="fact__value fact__value--mono">{formatWait(detail.waitingSeconds)}</span>
         </div>
+        <div className="fact fact--wide">
+          <span className="fact__label">Telefone</span>
+          <span className="fact__value fact__value--mono">
+            {detail.customerPhone ?? 'Não informado'}
+          </span>
+        </div>
+
         {detail.serviceLabel && (
           <div className="fact fact--wide">
             <span className="fact__label">Serviço</span>
@@ -93,6 +101,37 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
           </div>
         )}
       </div>
+
+      {detail.offer && (
+        <section className="offer" aria-label="Sugestão de oferta">
+          <header className="offer__head">
+            <span className="offer__icon" aria-hidden="true">
+              <Lightbulb size={14} strokeWidth={2} />
+            </span>
+            <h3 className="offer__eyebrow">Sugestão de oferta</h3>
+            <span className="offer__tag">
+              {OFFER_LABELS[detail.offer.offerKind] ?? detail.offer.offerKind}
+            </span>
+            <button
+              className="offer__refresh"
+              type="button"
+              disabled={ocupado}
+              onClick={() => agir(() => api.refreshOffer(token, detail.id))}
+              aria-label="Recalcular sugestão"
+            >
+              <RefreshCw size={13} strokeWidth={2} />
+            </button>
+          </header>
+
+          <p className="offer__headline">{detail.offer.headline}</p>
+          <p className="offer__rationale">{detail.offer.rationale}</p>
+
+          <p className="offer__meta">
+            {detail.offer.source === 'LLM' ? 'Gerada por IA' : 'Gerada por regras'} ·{' '}
+            {Math.round(detail.offer.confidence * 100)}% de confiança
+          </p>
+        </section>
+      )}
 
       <div className="detail__thread">
         {detail.messages.map((m) => (

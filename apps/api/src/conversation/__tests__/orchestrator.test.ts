@@ -166,3 +166,58 @@ test('o contexto de quem não foi identificado vem vazio, não inventado', async
   expect(r.data.context.serviceLabel).toBeNull()
   expect(r.data.context.intent).toBeNull()
 })
+
+test('RF005 entre canais: mensagem do WhatsApp retoma o atendimento do site', async () => {
+  // Cliente anonimo conversa no site e informa o telefone.
+  const noSite = await orquestrador.handle(entrada('minha internet esta caindo'))
+  if (!noSite.success) throw new Error('falhou')
+
+  await conversas.update(noSite.data.conversationId, { contactPhone: '+551134567890' })
+
+  // Dias depois escreve do WhatsApp. O webhook da Meta entrega o telefone, que
+  // e a unica chave que os dois canais dividem quando nao houve login.
+  const noZap = await orquestrador.handle({
+    channel: 'WHATSAPP',
+    text: 'oi, e sobre aquela internet',
+    receivedAt: new Date(),
+    phone: '+551134567890',
+  })
+  if (!noZap.success) throw new Error('falhou')
+
+  expect(noZap.data.conversationId).toBe(noSite.data.conversationId)
+  expect(noZap.data.protocol).toBe(noSite.data.protocol)
+  expect(noZap.data.context.originChannel).toBe('SITE')
+  expect(noZap.data.context.channel).toBe('WHATSAPP')
+
+  // O historico inteiro continua num lugar so, que e o ponto do produto.
+  const lista = await mensagens.listByConversation(noSite.data.conversationId)
+  expect(lista.length).toBe(4)
+  expect(lista[0]?.channel).toBe('SITE')
+  expect(lista.at(-1)?.channel).toBe('WHATSAPP')
+})
+
+test('telefone desconhecido no WhatsApp abre atendimento novo', async () => {
+  await orquestrador.handle(entrada('minha internet esta caindo'))
+
+  const noZap = await orquestrador.handle({
+    channel: 'WHATSAPP',
+    text: 'oi',
+    receivedAt: new Date(),
+    phone: '+5511900000000',
+  })
+  if (!noZap.success) throw new Error('falhou')
+
+  expect(noZap.data.context.originChannel).toBe('WHATSAPP')
+})
+
+test('o telefone da primeira mensagem do WhatsApp fica gravado na conversa', async () => {
+  const r = await orquestrador.handle({
+    channel: 'WHATSAPP',
+    text: 'quero a segunda via da fatura',
+    receivedAt: new Date(),
+    phone: '+5511977776666',
+  })
+  if (!r.success) throw new Error('falhou')
+
+  expect((await conversas.findById(r.data.conversationId))?.contactPhone).toBe('+5511977776666')
+})

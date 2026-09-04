@@ -9,7 +9,9 @@
 
   --font-display: 'Poppins', system-ui, sans-serif;
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-data: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  /* Dado tabular continua na Inter. O alinhamento em coluna vem de
+     font-variant-numeric, não de uma família monoespaçada. */
+  --font-data: 'Inter', system-ui, sans-serif;
 
   color-scheme: light;
 }
@@ -222,6 +224,7 @@ body {
 .auth__steps li::before {
   content: counter(passo);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   opacity: 0.75;
 }

@@ -3,5 +3,6 @@ export { type AppArea, AppSwitcher, type AppSwitcherProps } from './AppSwitcher.
 export { ChatComposer, type ChatComposerProps } from './ChatComposer.js'
 export { ChatTranscript, type ChatTranscriptProps } from './ChatTranscript.js'
 export { ClaroLogo } from './ClaroLogo.js'
+export { ContactPrompt, type ContactPromptProps } from './ContactPrompt.js'
 export { ContextRail, type ContextRailProps } from './ContextRail.js'
 export * from './types.js'
