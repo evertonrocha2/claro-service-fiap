@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Channel {
+  SITE
+  APP
+  WHATSAPP
+}
+
+enum Intent {
+  FATURA_SEGUNDA_VIA
+  PROBLEMA_TECNICO
+  CONSULTA_PLANO
+  CANCELAMENTO
+  FALAR_COM_ATENDENTE
+  DESCONHECIDA
+}
+
+enum ConversationStatus {
+  BOT
+  WAITING_HUMAN
+  WITH_HUMAN
+  RESOLVED
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum Sender {
+  CUSTOMER
+  BOT
+  AGENT
+}
+
+enum ServiceType {
+  INTERNET_RESIDENCIAL
+  MOVEL
+  TV
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+}
+
+enum AgentRole {
+  AGENT
+  MANAGER
+}
+
+model Customer {
+  id           String  @id @default(cuid())
+  cpf          String  @unique
+  name         String
+  email        String  @unique
+  passwordHash String?
+  phone        String? @unique
+
+  services      Service[]
+  invoices      Invoice[]
+  conversations Conversation[]
+
+  createdAt DateTime @default(now())
+}
+
+model Service {
+  id         String      @id @default(cuid())
+  customerId String
+  type       ServiceType
+  label      String
+  address    String?
+  status     String      @default("ACTIVE")
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  invoices      Invoice[]
+  conversations Conversation[]
+
+  @@index([customerId])
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  customerId String
+  serviceId  String?
+  dueDate    DateTime
+  amount     Decimal       @db.Decimal(10, 2)
+  barcode    String
+  status     InvoiceStatus @default(OPEN)
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  service  Service? @relation(fields: [serviceId], references: [id])
+
+  @@index([customerId, status])
+  @@index([serviceId])
+}
+
+model Conversation {
+  id                 String             @id @default(cuid())
+  protocol           String             @unique
+  customerId         String?
+  originChannel      Channel
+  currentChannel     Channel
+  intent             Intent?
+  serviceId          String?
+  status             ConversationStatus @default(BOT)
+  stage              String             @default("GREETING")
+  collectedData      Json?
+  consecutiveUnknown Int                @default(0)
+  assignedAgentId    String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  service       Service?       @relation(fields: [serviceId], references: [id])
+  agent         Agent?         @relation(fields: [assignedAgentId], references: [id])
+  messages      Message[]
+  handoffTokens HandoffToken[]
+
+  @@index([customerId, status])
+  @@index([status, updatedAt])
+  @@index([serviceId])
+  @@index([assignedAgentId])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  channel        Channel
+  direction      Direction
+  sender         Sender
+  text           String    @db.Text
+  intent         Intent?
+  confidence     Float?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model HandoffToken {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  conversationId String
+  targetChannel  Channel
+  expiresAt      DateTime
+  usedAt         DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId])
+}
+
+model Agent {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         AgentRole @default(AGENT)
+
+  conversations Conversation[]
+}
+
+model IntentCache {
+  id         String   @id @default(cuid())
+  textHash   String   @unique
+  intent     Intent
+  confidence Float
+  entities   Json
+  hits       Int      @default(0)
+  createdAt  DateTime @default(now())
+}
