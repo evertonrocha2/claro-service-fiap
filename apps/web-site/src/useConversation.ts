@@ -110,5 +110,14 @@ export function useConversation(token?: string) {
     }
   }, [])
 
-  return { estado, mensagens, setEstado, setMensagens, registrar, esquecer, carregando, sincronizar }
+  return {
+    estado,
+    mensagens,
+    setEstado,
+    setMensagens,
+    registrar,
+    esquecer,
+    carregando,
+    sincronizar,
+  }
 }

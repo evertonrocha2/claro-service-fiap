@@ -1,7 +1,7 @@
-import { AppSwitcher, ClaroLogo } from '@sync/chat-ui'
-import { History as HistoryIcon, Inbox, LogOut } from 'lucide-react'
+import { AppHeader } from '@sync/chat-ui'
+import { History as HistoryIcon, Inbox } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api, type ConversationDetail, type Metrics, type QueueItem } from './api.js'
+import { api, ConsoleError, type ConversationDetail, type Metrics, type QueueItem } from './api.js'
 import { AgentLogin } from './screens/AgentLogin.js'
 import { Board } from './screens/Board.js'
 import { Detail, EmptyDetail } from './screens/Detail.js'
@@ -60,8 +60,16 @@ export function App() {
           setDetalhe(null)
         }
       }
-    } catch {
-      setErro('Sem conexão com o servidor. Nova tentativa em instantes.')
+    } catch (e) {
+      // Distinguir os dois casos importa: um se resolve sozinho, o outro exige
+      // entrar de novo. Dizer "sem conexão" para uma sessão expirada mandava a
+      // pessoa procurar problema onde não havia.
+      const expirou = e instanceof ConsoleError && e.code === 'NAO_AUTENTICADO'
+      setErro(
+        expirou
+          ? 'Sessão expirada. Entre novamente para continuar.'
+          : 'Sem conexão com o servidor. Nova tentativa em instantes.',
+      )
     }
   }, [token, aberto])
 
@@ -110,28 +118,16 @@ export function App() {
 
   return (
     <div className="shell">
-      <header className="bar">
-        <span className="bar__logo">
-          <ClaroLogo height={20} />
-        </span>
-        <span className="bar__where">Console de Atendimento</span>
-
-        <AppSwitcher current="console" />
-
-        <div className="bar__right">
-          {erro && <span className="notice notice--error">{erro}</span>}
-          <span className="bar__identity">
-            <span className="bar__who">{sessao.agent.name}</span>
-            <span className="bar__role">
-              {sessao.agent.role === 'MANAGER' ? 'Gestão' : 'Atendimento'}
-            </span>
-          </span>
-          <button className="linkish" type="button" onClick={sair}>
-            <LogOut size={14} strokeWidth={2} />
-            Sair
-          </button>
-        </div>
-      </header>
+      <AppHeader
+        area="console"
+        title="Console de Atendimento"
+        identity={{
+          name: sessao.agent.name,
+          role: sessao.agent.role === 'MANAGER' ? 'Gestão' : 'Atendimento',
+        }}
+        onSignOut={sair}
+        aside={erro ? <span className="appbar__warn">{erro}</span> : null}
+      />
 
       <Pulse metrics={metricas} />
 

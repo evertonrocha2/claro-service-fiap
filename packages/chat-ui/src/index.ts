@@ -1,3 +1,4 @@
+export { AppHeader, type AppHeaderIdentity, type AppHeaderProps } from './AppHeader.js'
 export { type AppArea, AppSwitcher, type AppSwitcherProps } from './AppSwitcher.js'
 export { ChatComposer, type ChatComposerProps } from './ChatComposer.js'
 export { ChatTranscript, type ChatTranscriptProps } from './ChatTranscript.js'

@@ -1,22 +1,7 @@
-import {
-  AppSwitcher,
-  ChatComposer,
-  type ChatMessage,
-  ChatTranscript,
-  ClaroLogo,
-  ContextRail,
-  type ConversationState,
-} from '@sync/chat-ui'
-import { LogOut, UserRound } from 'lucide-react'
+import { AppHeader, ChatComposer, ChatTranscript, ContextRail } from '@sync/chat-ui'
 import { useState } from 'react'
 import { api, type Session, SyncApiError } from '../api.js'
-
-const ESTADO_INICIAL: ConversationState = {
-  conversationId: null,
-  protocol: null,
-  status: null,
-  context: null,
-}
+import { useConversation } from '../useConversation.js'
 
 export type ChatScreenProps = {
   sessao: Session | null
@@ -25,13 +10,17 @@ export type ChatScreenProps = {
 }
 
 export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
-  const [mensagens, setMensagens] = useState<ChatMessage[]>([])
-  const [estado, setEstado] = useState<ConversationState>(ESTADO_INICIAL)
+  const { estado, mensagens, setEstado, setMensagens, registrar, carregando, sincronizar } =
+    useConversation(sessao?.accessToken)
+
   const [aguardando, setAguardando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
   async function enviar(texto: string) {
     setErro(null)
+
+    // Mostra a mensagem antes da resposta chegar. A próxima sincronização troca
+    // este id provisório pelo do servidor.
     setMensagens((atuais) => [
       ...atuais,
       { id: crypto.randomUUID(), role: 'CUSTOMER', text: texto, at: new Date() },
@@ -40,6 +29,7 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
 
     try {
       const r = await api.sendMessage(texto, estado.conversationId, sessao?.accessToken)
+      registrar(r.conversationId)
 
       setEstado({
         conversationId: r.conversationId,
@@ -50,58 +40,34 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
 
       setMensagens((atuais) => [
         ...atuais,
-        {
-          id: crypto.randomUUID(),
-          role: r.status === 'WAITING_HUMAN' ? 'BOT' : 'BOT',
-          text: r.reply,
-          at: new Date(),
-        },
+        { id: crypto.randomUUID(), role: 'BOT', text: r.reply, at: new Date() },
       ])
     } catch (e) {
       setErro(
         e instanceof SyncApiError ? e.message : 'Sem conexão com o servidor. Tente novamente.',
       )
+      void sincronizar()
     } finally {
       setAguardando(false)
     }
   }
 
-  const vazio = sessao
-    ? `Olá, ${sessao.customer.name.split(' ')[0]}. Descreva o que está acontecendo e resolvemos por aqui.`
-    : 'Descreva o que está acontecendo. Posso ajudar com fatura, problema técnico ou seu plano.'
+  const vazio = carregando
+    ? 'Carregando seu atendimento.'
+    : sessao
+      ? `Olá, ${sessao.customer.name.split(' ')[0]}. Descreva o que está acontecendo e resolvemos por aqui.`
+      : 'Descreva o que está acontecendo. Posso ajudar com fatura, problema técnico ou seu plano.'
+
+  const comAtendente = estado.status === 'WAITING_HUMAN' || estado.status === 'WITH_HUMAN'
 
   return (
     <div className="sync app">
-      <header className="topbar">
-        <div className="topbar__brand">
-          <span className="topbar__logo">
-            <ClaroLogo height={22} />
-          </span>
-          <span className="topbar__section">Central de Atendimento</span>
-        </div>
-
-        <AppSwitcher current="site" />
-
-        <div className="topbar__account">
-          {sessao ? (
-            <>
-              <span className="topbar__name">
-                <UserRound size={15} strokeWidth={2} />
-                {sessao.customer.name}
-              </span>
-              <button className="btn btn--quiet" type="button" onClick={onSair}>
-                <LogOut size={14} strokeWidth={2} />
-                Sair
-              </button>
-            </>
-          ) : (
-            <button className="btn btn--quiet" type="button" onClick={onEntrar}>
-              <UserRound size={14} strokeWidth={2} />
-              Entrar
-            </button>
-          )}
-        </div>
-      </header>
+      <AppHeader
+        area="site"
+        title="Central de Atendimento"
+        {...(sessao ? { identity: { name: sessao.customer.name }, onSignOut: onSair } : {})}
+        {...(sessao ? {} : { onSignIn: onEntrar })}
+      />
 
       <ContextRail state={estado} />
 
@@ -114,7 +80,11 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
           </p>
         )}
 
-        <ChatComposer onSend={enviar} disabled={aguardando} placeholder="Escreva sua mensagem" />
+        <ChatComposer
+          onSend={enviar}
+          disabled={aguardando}
+          placeholder={comAtendente ? 'Escreva para o atendente' : 'Escreva sua mensagem'}
+        />
       </main>
     </div>
   )

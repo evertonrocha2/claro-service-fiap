@@ -1,4 +1,11 @@
-import { type Channel, type ConversationStatus, type Intent, type Result, err, ok } from '@sync/contracts'
+import {
+  type Channel,
+  type ConversationStatus,
+  err,
+  type Intent,
+  ok,
+  type Result,
+} from '@sync/contracts'
 import type {
   IConversationRepository,
   ICustomerRepository,
@@ -63,7 +70,8 @@ export class ReadConversationUseCase {
       conversa.customerId ? this.customers.findWithContext(conversa.customerId) : null,
     ])
 
-    const servico = cliente?.services.find((s) => s.id === conversa.serviceId) ?? cliente?.services[0]
+    const servico =
+      cliente?.services.find((s) => s.id === conversa.serviceId) ?? cliente?.services[0]
 
     return ok({
       conversationId: conversa.id,

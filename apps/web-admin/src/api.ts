@@ -78,6 +78,12 @@ async function pedir<T>(caminho: string, token: string | null, init: RequestInit
 }
 
 export const api = {
+  refresh: (refreshToken: string) =>
+    pedir<{ accessToken: string; refreshToken: string }>('/api/auth/refresh', null, {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
+
   login: (email: string, password: string) =>
     pedir<AgentSession>('/api/auth/agent/login', null, {
       method: 'POST',

@@ -1,11 +1,135 @@
 /*
-  Estilo do AppSwitcher, num arquivo próprio.
+  Cabeçalho e seletor de área, num arquivo próprio.
   
-  Ele aparece nos dois aplicativos, e cada um nomeia seus tokens de cor de um
-  jeito. Se dependesse deles, o componente sairia sem estilo de um lado e com a
+  Os dois aparecem no site e no console, e cada aplicativo nomeia seus tokens de
+  cor de um jeito. Se dependessem deles, sairiam sem estilo de um lado e com a
   cor errada do outro. Aqui os valores são próprios, com tokens --sw-* que quem
   usa pode sobrescrever.
+  
+  Este arquivo é a razão de o cabeçalho ser idêntico nas duas áreas: altura,
+  tamanho da marca e espaçamento vêm de um lugar só.
 */
+
+.appbar {
+  --ab-h: 58px;
+
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: var(--ab-h);
+  padding: 0 22px;
+  background: #ffffff;
+  border-bottom: 1px solid #e3e6ea;
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #1a1d21;
+}
+
+.appbar__logo {
+  display: flex;
+  align-items: center;
+  color: #e30613;
+  flex-shrink: 0;
+}
+
+.appbar__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5058;
+  padding-left: 16px;
+  border-left: 1px solid #e3e6ea;
+  white-space: nowrap;
+}
+
+.appbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.appbar__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #4a5058;
+  min-width: 0;
+}
+
+.appbar__identity-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.appbar__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1d21;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appbar__role {
+  font-size: 11px;
+  font-weight: 500;
+  color: #767d87;
+}
+
+.appbar__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5058;
+  background: #ffffff;
+  border: 1px solid #e3e6ea;
+  border-radius: 8px;
+  padding: 7px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 130ms ease,
+    color 130ms ease;
+}
+
+.appbar__action:hover {
+  border-color: #ccd1d8;
+  color: #1a1d21;
+}
+
+.appbar__action:focus-visible {
+  outline: 2px solid #e30613;
+  outline-offset: 2px;
+}
+
+.appbar__warn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0040f;
+  background: #fdeced;
+  border: 1px solid #f3c6ca;
+  border-radius: 8px;
+  padding: 6px 11px;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .appbar {
+    gap: 12px;
+    padding: 0 14px;
+  }
+
+  .appbar__title,
+  .appbar__role {
+    display: none;
+  }
+}
 
 .switcher {
   --sw-bg: #eef0f3;
