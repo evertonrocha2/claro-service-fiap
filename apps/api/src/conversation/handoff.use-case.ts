@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto'
 import { err, ok, type Result } from '@sync/contracts'
 import type { PrismaClient } from '@sync/db'
 import type { IConversationRepository } from '../context/index.js'
+import { assertPodeAcessar, type Requester } from './access.js'
 
 /** Quinze minutos. O link serve para atravessar de um canal ao outro, não para guardar. */
 export const HANDOFF_TTL_MS = 15 * 60 * 1000
@@ -67,10 +68,10 @@ export type HandoffConfig = {
  * O link muda com o driver, e o resto do sistema não sabe a diferença: em mock
  * abre a tela local, em meta abre o aplicativo com a mensagem pré-preenchida.
  *
- * Acesso: possuir o id da conversa basta, a mesma regra da leitura. Exigir token
- * do dono impedia justamente o caso previsto no Cenário 1: quem conversa anônimo,
- * informa o CPF e depois quer continuar no WhatsApp passava a ser dono da
- * conversa e perdia o direito de gerar o próprio link.
+ * Acesso: mesma regra da leitura, em access.ts. Cliente autenticado gera link só
+ * da conversa dele. Sessão anônima gera com o id, porque exigir token do dono
+ * impedia justamente o Cenário 1: quem conversa anônimo, informa o CPF e depois
+ * quer continuar no WhatsApp passava a ser dono e perdia o direito ao próprio link.
  */
 export class HandoffUseCase {
   constructor(
@@ -79,11 +80,14 @@ export class HandoffUseCase {
     private readonly config: HandoffConfig,
   ) {}
 
-  async create(conversationId: string): Promise<Result<HandoffLink>> {
+  async create(conversationId: string, requester?: Requester): Promise<Result<HandoffLink>> {
     const conversa = await this.conversations.findById(conversationId)
     if (!conversa) {
       return err('CONVERSA_NAO_ENCONTRADA', 'Não encontramos este atendimento.')
     }
+
+    const permitido = assertPodeAcessar(conversa.customerId, requester)
+    if (!permitido.success) return permitido
 
     const code = generateHandoffCode()
     const expiresAt = new Date(Date.now() + HANDOFF_TTL_MS)

@@ -38,9 +38,29 @@ export type Container = {
   admin: AdminDeps
 }
 
+/**
+ * Escolhe o driver do WhatsApp, e recusa o silêncio em produção.
+ *
+ * O mock abre uma porta HTTP sem assinatura nenhuma: quem posta nela declara o
+ * telefone que quiser. Isso é aceitável em desenvolvimento e é uma falha em
+ * produção, então esquecer a variável no deploy não pode cair no mock por
+ * padrão. Sem WHATSAPP_DRIVER definido, produção não sobe.
+ */
+function resolveWhatsAppDriver(): 'mock' | 'meta' {
+  const escolhido = process.env.WHATSAPP_DRIVER
+
+  if (process.env.NODE_ENV === 'production' && escolhido !== 'meta' && escolhido !== 'mock') {
+    throw new Error(
+      'WHATSAPP_DRIVER é obrigatório em produção. Use meta, ou mock de forma explícita.',
+    )
+  }
+
+  return escolhido === 'meta' ? 'meta' : 'mock'
+}
+
 /** Raiz de composição. É o único lugar que instancia implementações concretas. */
 export function buildContainer(): Container {
-  const whatsappDriver = process.env.WHATSAPP_DRIVER === 'meta' ? 'meta' : 'mock'
+  const whatsappDriver = resolveWhatsAppDriver()
   const conversations = new PrismaConversationRepository(prisma)
   const messages = new PrismaMessageRepository(prisma)
   const customers = new PrismaCustomerRepository(prisma)

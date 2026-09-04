@@ -1,6 +1,7 @@
 import { err, ok, type Result } from '@sync/contracts'
 import type { IConversationRepository } from '../context/index.js'
 import { normalizePhone } from '../identity/phone.js'
+import { assertPodeAcessar, type Requester } from './access.js'
 
 /**
  * Registra o telefone de contato de um atendimento.
@@ -27,14 +28,17 @@ import { normalizePhone } from '../identity/phone.js'
  * Para produção, o caminho é confirmar a posse com código enviado por SMS antes
  * de gravar. Fora do escopo deste MVP, e anotado como dívida consciente.
  *
- * Acesso: possuir o id da conversa basta, mesma regra da leitura e do handoff.
- * Como o telefone não concede identidade nenhuma, não há o que proteger além do
- * próprio id.
+ * Acesso: mesma regra da leitura, em access.ts. Cliente autenticado só grava na
+ * conversa dele; sessão anônima grava com o id.
  */
 export class SetContactUseCase {
   constructor(private readonly conversations: IConversationRepository) {}
 
-  async execute(conversationId: string, phoneBruto: string): Promise<Result<{ phone: string }>> {
+  async execute(
+    conversationId: string,
+    phoneBruto: string,
+    requester?: Requester,
+  ): Promise<Result<{ phone: string }>> {
     const normalizado = normalizePhone(phoneBruto)
     if (!normalizado.success) return normalizado
 
@@ -42,6 +46,9 @@ export class SetContactUseCase {
     if (!conversa) {
       return err('CONVERSA_NAO_ENCONTRADA', 'Não encontramos este atendimento.')
     }
+
+    const permitido = assertPodeAcessar(conversa.customerId, requester)
+    if (!permitido.success) return permitido
 
     const phone = normalizado.data
     await this.conversations.update(conversationId, { contactPhone: phone })

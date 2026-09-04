@@ -11,6 +11,13 @@ import type { Container } from './container.js'
 
 const contatoSchema = z.object({ phone: z.string().min(8).max(24) })
 
+/** 403 e diferente de 404 aqui: um diz "nao e sua", o outro diz "nao existe". */
+function statusDoAcesso(code: string): number {
+  if (code === 'CONVERSA_DE_OUTRO_CLIENTE') return 403
+  if (code === 'CONVERSA_NAO_ENCONTRADA') return 404
+  return 400
+}
+
 function parseChannel(raw: string): Channel | null {
   const upper = raw.toUpperCase()
   return (CHANNELS as readonly string[]).includes(upper) ? (upper as Channel) : null
@@ -31,10 +38,12 @@ export function createApp(deps: Container): Express {
     '/api/conversations/:id',
     optionalAuth(deps.auth.tokens),
     async (req: Request, res: Response) => {
-      const r = await deps.readConversation.execute(String(req.params.id))
+      const r = await deps.readConversation.execute(String(req.params.id), req.auth)
 
       if (!r.success) {
-        res.status(404).json({ error: r.error })
+        res
+          .status(r.error.code === 'CONVERSA_DE_OUTRO_CLIENTE' ? 403 : 404)
+          .json({ error: r.error })
         return
       }
       res.json(r.data)
@@ -96,10 +105,10 @@ export function createApp(deps: Container): Express {
     '/api/conversations/:id/handoff',
     optionalAuth(deps.auth.tokens),
     async (req: Request, res: Response) => {
-      const r = await deps.handoff.create(String(req.params.id))
+      const r = await deps.handoff.create(String(req.params.id), req.auth)
 
       if (!r.success) {
-        res.status(r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 400).json({ error: r.error })
+        res.status(statusDoAcesso(r.error.code)).json({ error: r.error })
         return
       }
       res.json(r.data)
@@ -118,10 +127,10 @@ export function createApp(deps: Container): Express {
         return
       }
 
-      const r = await deps.setContact.execute(String(req.params.id), corpo.data.phone)
+      const r = await deps.setContact.execute(String(req.params.id), corpo.data.phone, req.auth)
 
       if (!r.success) {
-        res.status(r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 400).json({ error: r.error })
+        res.status(statusDoAcesso(r.error.code)).json({ error: r.error })
         return
       }
       res.json(r.data)

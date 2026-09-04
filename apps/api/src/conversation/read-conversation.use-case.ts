@@ -11,6 +11,7 @@ import type {
   ICustomerRepository,
   IMessageRepository,
 } from '../context/index.js'
+import { assertPodeAcessar, type Requester } from './access.js'
 
 export type PublicMessage = {
   id: string
@@ -42,7 +43,8 @@ export type PublicConversation = {
  * estivesse salvo. O segundo é mais sério: a resposta do atendente ficava só no
  * console e nunca chegava a quem esperava por ela.
  *
- * Acesso: possuir o id da conversa basta para ler.
+ * Acesso: cliente autenticado le apenas a conversa dele; sessao anonima le com
+ * o id. A regra e explicada em access.ts.
  *
  * O id é um cuid imprevisível, entregue apenas a quem participa dela. Exigir
  * token do dono parecia mais seguro e quebrava o fluxo principal: quem conversa
@@ -65,11 +67,17 @@ export class ReadConversationUseCase {
     private readonly customers: ICustomerRepository,
   ) {}
 
-  async execute(conversationId: string): Promise<Result<PublicConversation>> {
+  async execute(
+    conversationId: string,
+    requester?: Requester,
+  ): Promise<Result<PublicConversation>> {
     const conversa = await this.conversations.findById(conversationId)
     if (!conversa) {
       return err('CONVERSA_NAO_ENCONTRADA', 'Não encontramos este atendimento.')
     }
+
+    const permitido = assertPodeAcessar(conversa.customerId, requester)
+    if (!permitido.success) return permitido
 
     const [mensagens, cliente] = await Promise.all([
       this.messages.listByConversation(conversationId),
