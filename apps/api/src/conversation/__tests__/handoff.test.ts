@@ -34,8 +34,36 @@ test('o codigo tem forma previsivel e e sempre diferente', () => {
   const a = generateHandoffCode()
   const b = generateHandoffCode()
 
-  expect(a).toMatch(/^SYNC-[A-Z0-9]{4}$/)
+  expect(a).toMatch(/^SYNC-[A-Z0-9]{16}$/)
   expect(a).not.toBe(b)
+})
+
+test('o codigo tem entropia de credencial, nao de codigo de barras', () => {
+  // 16 caracteres de um alfabeto de 31 sao cerca de 79 bits. Com os 4 originais
+  // eram 19,8, e o codigo da acesso a conversa de outra pessoa: a 1000
+  // requisicoes por segundo dentro dos 15 minutos, acertava-se um em 60% das
+  // vezes.
+  const bits = 16 * Math.log2(31)
+  expect(bits).toBeGreaterThan(78)
+})
+
+test('os caracteres saem sem vies de modulo', () => {
+  // randomBytes com % 31 favorecia os oito primeiros do alfabeto, porque
+  // 256 % 31 = 8. Uma amostra grande deve distribuir de forma parelha.
+  const contagem = new Map<string, number>()
+  for (let i = 0; i < 4000; i++) {
+    for (const c of generateHandoffCode().slice(5)) {
+      contagem.set(c, (contagem.get(c) ?? 0) + 1)
+    }
+  }
+
+  const valores = [...contagem.values()]
+  const esperado = (4000 * 16) / 31
+
+  expect(contagem.size).toBe(31)
+  // Margem folgada: o teste procura vies sistematico, nao ruido de amostragem.
+  expect(Math.min(...valores)).toBeGreaterThan(esperado * 0.8)
+  expect(Math.max(...valores)).toBeLessThan(esperado * 1.2)
 })
 
 test('o codigo evita caracteres que se confundem digitando', () => {
@@ -45,9 +73,16 @@ test('o codigo evita caracteres que se confundem digitando', () => {
 })
 
 test('encontra o codigo dentro da mensagem do cliente', () => {
-  expect(extractHandoffCode('Continuar atendimento SYNC-A7K2')).toBe('SYNC-A7K2')
-  expect(extractHandoffCode('oi, quero continuar: sync-a7k2 por favor')).toBe('SYNC-A7K2')
+  const code = generateHandoffCode()
+
+  expect(extractHandoffCode(`Continuar atendimento ${code}`)).toBe(code)
+  expect(extractHandoffCode(`oi, quero continuar: ${code.toLowerCase()} por favor`)).toBe(code)
   expect(extractHandoffCode('bom dia')).toBeNull()
+})
+
+test('codigo curto nao e mais aceito como codigo', () => {
+  // Garante que o formato antigo nao volte por acidente numa mensagem.
+  expect(extractHandoffCode('Continuar atendimento SYNC-A7K2')).toBeNull()
 })
 
 // ---------- link ----------
@@ -126,18 +161,18 @@ test('codigo expirado nao vale', async () => {
   const c = await anonima()
   await prisma.handoffToken.create({
     data: {
-      code: 'SYNC-XPRD',
+      code: 'SYNC-XPRDXPRDXPRDX',
       conversationId: c.id,
       targetChannel: 'WHATSAPP',
       expiresAt: new Date(Date.now() - 1000),
     },
   })
 
-  expect(await mock.consume('Continuar atendimento SYNC-XPRD')).toBeNull()
+  expect(await mock.consume('Continuar atendimento SYNC-XPRDXPRDXPRDX')).toBeNull()
 })
 
 test('codigo inventado nao vale', async () => {
-  expect(await mock.consume('Continuar atendimento SYNC-ZZZZ')).toBeNull()
+  expect(await mock.consume(`Continuar atendimento ${generateHandoffCode()}`)).toBeNull()
 })
 
 test('mensagem sem codigo nao tenta consumir nada', async () => {

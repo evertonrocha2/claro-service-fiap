@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { randomInt } from 'node:crypto'
 import { err, ok, type Result } from '@sync/contracts'
 import type { PrismaClient } from '@sync/db'
 import type { IConversationRepository } from '../context/index.js'
@@ -6,18 +6,33 @@ import type { IConversationRepository } from '../context/index.js'
 /** Quinze minutos. O link serve para atravessar de um canal ao outro, não para guardar. */
 export const HANDOFF_TTL_MS = 15 * 60 * 1000
 
-const CODE_RE = /\bSYNC-[A-Z0-9]{4}\b/i
-
 /**
- * Alfabeto sem os caracteres que se confundem lidos em voz alta ou digitados de
- * um aparelho para outro: sem O e 0, sem I, 1 e L.
+ * Alfabeto sem os caracteres que se confundem lidos em voz alta: sem O e 0, sem
+ * I, 1 e L. Custa nada e ajuda se alguem precisar ditar o codigo no telefone.
  */
 const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
+/**
+ * Comprimento do codigo: 16 caracteres, cerca de 79 bits.
+ *
+ * A primeira versao usava 4, alegando que o cliente digitaria o codigo. Ele
+ * nunca digita: o codigo chega pre-preenchido no link e a pessoa so aperta
+ * enviar. Era uma restricao inventada, e ela custava caro.
+ *
+ * Com 4 caracteres o espaco tinha 19,8 bits, e este codigo e uma credencial:
+ * quem acerta um entra na conversa de outra pessoa, le o nome, o servico e a
+ * fatura, e escreve como se fosse ela. A 1000 requisicoes por segundo, dentro
+ * dos 15 minutos de validade, a chance de acertar um codigo vivo passava de 60%.
+ */
+const CODE_LEN = 16
+
+const CODE_RE = new RegExp(String.raw`\bSYNC-[${ALFABETO}]{${CODE_LEN}}\b`, 'i')
+
 export function generateHandoffCode(): string {
-  const bytes = randomBytes(4)
   let sufixo = ''
-  for (const b of bytes) sufixo += ALFABETO[b % ALFABETO.length]
+  // randomInt em vez de randomBytes com modulo: 256 % 31 = 8, entao os oito
+  // primeiros caracteres do alfabeto sairiam mais que os outros.
+  for (let i = 0; i < CODE_LEN; i++) sufixo += ALFABETO[randomInt(0, ALFABETO.length)]
   return `SYNC-${sufixo}`
 }
 
