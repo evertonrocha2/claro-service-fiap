@@ -1,7 +1,7 @@
 {
   "name": "sync",
   "scripts": {
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run --workspaces --if-present typecheck",
     "lint": "biome check .",
     "db:up": "docker compose up -d --wait",
     "db:migrate": "npm -w @sync/db run migrate",

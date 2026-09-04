@@ -1,5 +1,5 @@
 import type { Channel, ConversationStatus, Intent } from '@sync/contracts'
-import type { Conversation, PrismaClient } from '@sync/db'
+import type { Conversation, Prisma, PrismaClient } from '@sync/db'
 import { generateProtocol } from './protocol.js'
 
 export type CreateConversationInput = {
@@ -67,9 +67,12 @@ export class PrismaConversationRepository implements IConversationRepository {
 
   update(id: string, patch: UpdateConversationInput): Promise<Conversation> {
     const { collectedData, ...resto } = patch
+    // O tipo Json do Prisma nao aceita Record<string, unknown> direto. A conversao
+    // e segura: collectedData e sempre um objeto simples, serializavel.
+    const json = collectedData as Prisma.InputJsonValue | undefined
     return this.db.conversation.update({
       where: { id },
-      data: collectedData ? { ...resto, collectedData } : resto,
+      data: json ? { ...resto, collectedData: json } : resto,
     })
   }
 }
