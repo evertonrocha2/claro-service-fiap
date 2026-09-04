@@ -167,9 +167,9 @@ async function main() {
   await sleep(1500)
   await cdp.shot('6-historico')
 
-  await cdp.eval(CLICAR('Meus atendimentos', '.nav__item'))
+  await cdp.eval(CLICAR('Meu painel', '.nav__item'))
   await sleep(1800)
-  await cdp.shot('7-meus-atendimentos')
+  await cdp.shot('7-meu-painel')
 
   // Painel pessoal e quadro da equipe: um atendente nao ve o segundo, entao a
   // captura da equipe entra logada como a gestora.

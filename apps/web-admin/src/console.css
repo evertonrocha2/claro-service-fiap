@@ -293,11 +293,16 @@ button {
 }
 
 .toolbar .nav {
-  padding-right: 18px;
-  margin-right: 0;
   border: none;
   background: none;
   border-radius: 0;
+  padding: 0;
+}
+
+/* A divisoria so existe quando ha filtros do outro lado dela. Sem isso ficava
+   uma linha solta no fim da navegacao, apontando para nada. */
+.toolbar:has(.filters) .nav {
+  padding-right: 18px;
   border-right: 1px solid var(--line);
 }
 
@@ -1262,12 +1267,82 @@ button {
   color: var(--muted);
 }
 
+.perf__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 11px 6px 9px;
+  font: inherit;
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.perf__back:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+/* Duas colunas quando cabe: os atendimentos na mao e o que ja foi encerrado
+   respondem perguntas diferentes e nao deveriam exigir rolagem entre elas. */
+.perf__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
 .perf__block {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 11px;
   padding: 16px 18px;
-  max-width: 620px;
+}
+
+.perf__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.perf__item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font: inherit;
+  color: inherit;
+}
+
+.perf__item:hover {
+  border-color: var(--line-strong);
+}
+
+.perf__item[aria-current='true'] {
+  border-color: var(--claro-red);
+  background: var(--claro-tint);
+}
+
+.perf__item-who {
+  font-size: var(--t-strong);
+  font-weight: 600;
+}
+
+.perf__item-meta {
+  font-size: var(--t-small);
+  color: var(--muted);
 }
 
 .perf__block-title {

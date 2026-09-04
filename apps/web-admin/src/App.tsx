@@ -21,16 +21,27 @@ import {
   filtrosAtivos,
 } from './screens/Filters.js'
 import { History } from './screens/History.js'
-import { Performance, Team } from './screens/Performance.js'
+import { MyDashboard } from './screens/MyDashboard.js'
+import { Team } from './screens/Performance.js'
 import { Pulse } from './screens/Pulse.js'
 import { useAgentSession } from './useAgentSession.js'
 
-type Aba = 'fila' | 'historico' | 'meus' | 'equipe'
-
 /**
- * A fila muda porque clientes chegam, não porque este atendente fez algo. Sem
- * atualizar sozinho, o console mentiria em silêncio a cada minuto parado.
+ * Cada tela responde a uma pergunta diferente, e e por isso que sao estas.
+ *
+ * fila       quem precisa de mim agora
+ * painel     o que esta na minha mao e o que eu ja fiz
+ * historico  o que a equipe ja encerrou
+ * equipe     como a equipe esta, so para gestao
+ *
+ * A versao anterior tinha "Meus atendimentos" como uma quarta lista de conversas
+ * e escondia os numeros pessoais dentro do detalhe que so o gestor abria pela
+ * aba da equipe. Um atendente nao tinha caminho nenhum ate os proprios numeros.
  */
+type Aba = 'fila' | 'painel' | 'historico' | 'equipe'
+
+const LISTAS_DE_CONVERSA: Aba[] = ['fila', 'historico']
+
 const INTERVALO_MS = 5000
 
 export function App() {
@@ -48,6 +59,7 @@ export function App() {
   const [meuDesempenho, setMeuDesempenho] = useState<AgentPerformance | null>(null)
   const [equipe, setEquipe] = useState<AgentPerformance[]>([])
   const [olhando, setOlhando] = useState<AgentPerformance | null>(null)
+  const [conversasDoOutro, setConversasDoOutro] = useState<QueueItem[]>([])
 
   const token = sessao?.accessToken ?? null
   const aberto = selecionado
@@ -63,6 +75,7 @@ export function App() {
         api.queue(token, { assignedTo: 'me', status: 'WITH_HUMAN' }),
         api.myPerformance(token),
       ])
+
       setFila(ativos)
       setEncerrados(resolvidos)
       setMetricas(m)
@@ -71,14 +84,12 @@ export function App() {
       setMeuDesempenho(desempenho)
       setErro(null)
 
-      // A equipe só é buscada por quem pode vê-la. Pedir e receber 403 a cada
-      // ciclo poluiria o log do servidor e não mudaria nada na tela.
+      // A equipe so e buscada por quem pode ve-la. Pedir e receber 403 a cada
+      // ciclo poluiria o log do servidor e nao mudaria nada na tela.
       if (perfil.canViewTeam) {
         setEquipe(await api.teamPerformance(token))
       }
 
-      // O detalhe aberto entra no mesmo ciclo: se outro atendente assumir ou
-      // encerrar o caso, a tela precisa refletir isso sem depender de clique.
       if (aberto) {
         try {
           setDetalhe(await api.detail(token, aberto))
@@ -87,9 +98,6 @@ export function App() {
         }
       }
     } catch (e) {
-      // Distinguir os dois casos importa: um se resolve sozinho, o outro exige
-      // entrar de novo. Dizer "sem conexão" para uma sessão expirada mandava a
-      // pessoa procurar problema onde não havia.
       const expirou = e instanceof ConsoleError && e.code === 'NAO_AUTENTICADO'
       setErro(
         expirou
@@ -123,26 +131,33 @@ export function App() {
     else setDetalhe(null)
   }, [selecionado, carregarDetalhe])
 
-  // Trocar de aba zera o filtro: os critérios da fila não fazem sentido no
-  // histórico, e um filtro invisível herdado esconderia registros sem explicação.
   function trocarAba(nova: Aba) {
     setAba(nova)
     setFiltros(FILTRO_VAZIO)
     setOlhando(null)
+    setConversasDoOutro([])
+    // Fecha o detalhe ao trocar de tela: deixa-lo aberto mostrava uma conversa
+    // sem relacao ao lado dos numeros de outra pessoa.
+    setSelecionado(null)
   }
 
-  /** Gestor abre os números de um atendente sem sair da tela da equipe. */
+  /** Gestor abre o painel de um atendente, com os numeros e a mao dele. */
   async function verAtendente(agentId: string) {
     if (!token) return
     try {
-      setOlhando(await api.agentPerformance(token, agentId))
+      const [desempenho, conversas] = await Promise.all([
+        api.agentPerformance(token, agentId),
+        api.queue(token, { assignedTo: agentId, status: 'WITH_HUMAN' }),
+      ])
+      setOlhando(desempenho)
+      setConversasDoOutro(conversas)
+      setSelecionado(null)
     } catch {
       setOlhando(null)
     }
   }
 
-  const base = aba === 'fila' ? fila : aba === 'meus' ? meus : encerrados
-  const comLista = aba === 'fila' || aba === 'historico' || aba === 'meus'
+  const base = aba === 'fila' ? fila : encerrados
   const visiveis = useMemo(() => aplicarFiltros(base, filtros), [base, filtros])
 
   if (!sessao || !token) {
@@ -153,6 +168,12 @@ export function App() {
     await carregar()
     if (selecionado) await carregarDetalhe(selecionado)
   }
+
+  const listaDeConversa = LISTAS_DE_CONVERSA.includes(aba)
+
+  // A faixa de indicadores e da operacao inteira. No painel pessoal ela
+  // competiria com os numeros da propria pessoa e os dois se confundiriam.
+  const mostrarPulse = aba === 'fila' || aba === 'equipe'
 
   return (
     <div className="shell">
@@ -167,8 +188,6 @@ export function App() {
         aside={erro ? <span className="appbar__warn">{erro}</span> : null}
       />
 
-      <Pulse metrics={metricas} />
-
       <div className="toolbar">
         <nav className="nav" aria-label="Seções do console">
           <button
@@ -181,16 +200,18 @@ export function App() {
             Fila de atendimento
             <span className="nav__badge">{fila.length}</span>
           </button>
+
           <button
             type="button"
             className="nav__item"
-            aria-current={aba === 'meus'}
-            onClick={() => trocarAba('meus')}
+            aria-current={aba === 'painel'}
+            onClick={() => trocarAba('painel')}
           >
             <User size={15} strokeWidth={2} />
-            Meus atendimentos
-            <span className="nav__badge">{meus.length}</span>
+            Meu painel
+            {meus.length > 0 && <span className="nav__badge">{meus.length}</span>}
           </button>
+
           <button
             type="button"
             className="nav__item"
@@ -202,9 +223,9 @@ export function App() {
             <span className="nav__badge">{encerrados.length}</span>
           </button>
 
-          {/* A aba da equipe só existe para quem tem o perfil. Esconder não é
-              a proteção: a API recusa de todo jeito. Isto é só não oferecer
-              porta que não abre. */}
+          {/* A aba da equipe so existe para quem tem o perfil. Esconder nao e a
+              protecao: a API recusa de todo jeito. Isto e so nao oferecer porta
+              que nao abre. */}
           {eu?.canViewTeam && (
             <button
               type="button"
@@ -219,7 +240,7 @@ export function App() {
           )}
         </nav>
 
-        {comLista && (
+        {listaDeConversa && (
           <Filters
             value={filtros}
             onChange={setFiltros}
@@ -230,12 +251,10 @@ export function App() {
         )}
       </div>
 
+      {mostrarPulse && <Pulse metrics={metricas} />}
+
       <div className="workarea">
         {aba === 'fila' && (
-          <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
-        )}
-
-        {aba === 'meus' && (
           <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
         )}
 
@@ -248,17 +267,38 @@ export function App() {
           />
         )}
 
+        {aba === 'painel' && (
+          <MyDashboard
+            performance={meuDesempenho}
+            conversations={meus}
+            selectedId={selecionado}
+            onSelect={setSelecionado}
+          />
+        )}
+
         {aba === 'equipe' &&
           (olhando ? (
-            <Performance
+            <MyDashboard
               performance={olhando}
-              title={olhando.name}
-              subtitle={olhando.role === 'MANAGER' ? 'Gestão' : 'Atendimento'}
+              conversations={conversasDoOutro}
+              selectedId={selecionado}
+              onSelect={setSelecionado}
+              viewingOther={{
+                name: olhando.name,
+                role: olhando.role === 'MANAGER' ? 'Gestão' : 'Atendimento',
+              }}
+              onBack={() => {
+                setOlhando(null)
+                setConversasDoOutro([])
+                setSelecionado(null)
+              }}
             />
           ) : (
             <Team team={equipe} selectedId={null} onSelect={verAtendente} />
           ))}
 
+        {/* O detalhe acompanha as telas de conversa. Nas de numero, ao lado de
+            indicadores que nao tem relacao com ele, seria ruido. */}
         {detalhe ? (
           <Detail
             token={token}
@@ -267,7 +307,7 @@ export function App() {
             onChanged={aposMudanca}
           />
         ) : (
-          <EmptyDetail />
+          listaDeConversa && <EmptyDetail />
         )}
       </div>
     </div>
