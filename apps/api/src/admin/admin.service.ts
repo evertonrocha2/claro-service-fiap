@@ -24,6 +24,7 @@ export type QueueItem = {
 }
 
 export type ConversationDetail = QueueItem & {
+  assignedAgentId: string | null
   customerCpfMasked: string | null
   customerEmail: string | null
   messages: {
@@ -38,6 +39,7 @@ export type ConversationDetail = QueueItem & {
 export type Metrics = {
   waiting: number
   withAgent: number
+  withBot: number
   resolvedToday: number
   botResolutionRate: number
   worstWaitSeconds: number
@@ -57,7 +59,8 @@ export function maskCpf(cpf: string): string {
   return `***.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-**`
 }
 
-const ATIVOS: ConversationStatus[] = ['BOT', 'WAITING_HUMAN', 'WITH_HUMAN']
+/** O quadro e a fila humana. Conversa ainda com a IA nao espera ninguem. */
+const PRECISAM_DE_GENTE: ConversationStatus[] = ['WAITING_HUMAN', 'WITH_HUMAN']
 
 export class AdminService {
   constructor(
@@ -68,7 +71,7 @@ export class AdminService {
   async queue(filters: QueueFilters, now = new Date()): Promise<QueueItem[]> {
     const conversas = await this.db.conversation.findMany({
       where: {
-        status: filters.status ? filters.status : { in: ATIVOS },
+        status: filters.status ? filters.status : { in: PRECISAM_DE_GENTE },
         ...(filters.channel ? { currentChannel: filters.channel } : {}),
         ...(filters.intent ? { intent: filters.intent } : {}),
       },
@@ -76,7 +79,13 @@ export class AdminService {
         customer: true,
         service: true,
         agent: true,
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+        // Só mensagem do cliente: o card precisa mostrar o problema, não a
+        // última fala do bot, que é sempre a mesma frase de escalonamento.
+        messages: {
+          where: { sender: 'CUSTOMER' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { updatedAt: 'asc' },
     })
@@ -117,8 +126,9 @@ export class AdminService {
       status: c.status,
       serviceLabel: c.service?.label ?? null,
       waitingSeconds: Math.max(0, Math.floor((now.getTime() - c.updatedAt.getTime()) / 1000)),
-      lastMessage: mensagens.at(-1)?.text ?? null,
+      lastMessage: mensagens.findLast((m) => m.sender === 'CUSTOMER')?.text ?? null,
       assignedAgentName: c.agent?.name ?? null,
+      assignedAgentId: c.assignedAgentId,
       messages: mensagens.map((m) => ({
         id: m.id,
         sender: m.sender,
@@ -217,6 +227,7 @@ export class AdminService {
     return {
       waiting: esperando.length,
       withAgent: comAtendente.length,
+      withBot: conversas.filter((c) => c.status === 'BOT').length,
       resolvedToday: resolvidasHoje,
       botResolutionRate: resolvidas.length === 0 ? 0 : semHumano.length / resolvidas.length,
       worstWaitSeconds: esperas.length === 0 ? 0 : Math.max(...esperas),

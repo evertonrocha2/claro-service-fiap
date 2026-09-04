@@ -170,3 +170,38 @@ test('taxa de resolução automática conta só quem nunca passou por humano', a
   const m = await admin.metrics()
   expect(m.botResolutionRate).toBeCloseTo(0.5)
 })
+
+test('o quadro é a fila humana: conversa ainda com a IA não aparece', async () => {
+  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE', customerId: cliente.id })
+
+  // Criada com status BOT. Ninguém está esperando um humano, então não é fila.
+  expect(await admin.queue({})).toHaveLength(0)
+
+  const m = await admin.metrics()
+  expect(m.withBot).toBe(1)
+  expect(m.waiting).toBe(0)
+})
+
+test('o card mostra o que o cliente disse, não a última fala do bot', async () => {
+  const c = await conversaEsperando()
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'SITE',
+    direction: 'OUTBOUND',
+    sender: 'BOT',
+    text: 'Vou te transferir para um atendente.',
+  })
+
+  const fila = await admin.queue({})
+  expect(fila[0]?.lastMessage).toBe('preciso de ajuda')
+})
+
+test('o detalhe diz de quem é o atendimento, para a interface não mentir', async () => {
+  const c = await conversaEsperando()
+  const bruno = await atendente()
+  await admin.claim(c.id, bruno.id)
+
+  const r = await admin.detail(c.id)
+  expect(r.success && r.data.assignedAgentId).toBe(bruno.id)
+})
