@@ -9,9 +9,11 @@
     "start": "tsx src/server.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.0.0",
     "@sync/contracts": "*",
     "@sync/db": "*",
     "express": "^5.1.0",
+    "jose": "^6.0.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
