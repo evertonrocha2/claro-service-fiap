@@ -1,4 +1,4 @@
-import type { ConversationStatus, InboundMessage, Intent, Result } from '@sync/contracts'
+import type { Channel, ConversationStatus, InboundMessage, Intent, Result } from '@sync/contracts'
 import { err, ok } from '@sync/contracts'
 import type { Conversation, Customer } from '@sync/db'
 import type {
@@ -18,6 +18,21 @@ export type HandleResult = {
   reply: string
   intent: Intent
   status: ConversationStatus
+  /**
+   * O que o Sync sabe da jornada neste momento.
+   *
+   * Vai na resposta porque a interface mostra isso ao cliente o tempo todo: e o
+   * RF004 tornado visivel, e tambem uma garantia de transparencia sob a LGPD, ja
+   * que a pessoa ve exatamente qual dado dela esta guardado na conversa.
+   */
+  context: {
+    identified: boolean
+    customerName: string | null
+    channel: Channel
+    originChannel: Channel
+    intent: Intent | null
+    serviceLabel: string | null
+  }
 }
 
 /**
@@ -106,12 +121,25 @@ export class ConversationOrchestrator {
       confidence: classificacao.confidence,
     })
 
+    const servicoRelacionado =
+      classificacao.intent === 'PROBLEMA_TECNICO'
+        ? (contexto.services.find((s) => s.type === 'INTERNET_RESIDENCIAL') ?? contexto.services[0])
+        : contexto.services[0]
+
     return ok({
       conversationId: atualizada.id,
       protocol: atualizada.protocol,
       reply: resposta,
       intent: classificacao.intent,
       status,
+      context: {
+        identified: contexto.identified,
+        customerName: contexto.customerName ?? null,
+        channel: msg.channel,
+        originChannel: atualizada.originChannel,
+        intent: classificacao.intent === 'DESCONHECIDA' ? null : classificacao.intent,
+        serviceLabel: contexto.identified ? (servicoRelacionado?.label ?? null) : null,
+      },
     })
   }
 

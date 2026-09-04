@@ -139,3 +139,30 @@ test('RF005: o cliente identificado numa mensagem não é perguntado de novo na 
   expect(segunda.data.reply).toContain('20/05')
   expect(segunda.data.reply.toLowerCase()).not.toContain('informar seu cpf')
 })
+
+test('a resposta carrega o contexto conhecido, para a interface mostrar', async () => {
+  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const r = await orquestrador.handle(
+    entrada('minha internet está caindo', { customerId: maria.id }),
+  )
+  if (!r.success) throw new Error('falhou')
+
+  expect(r.data.context).toEqual({
+    identified: true,
+    customerName: 'Maria Silva',
+    channel: 'SITE',
+    originChannel: 'SITE',
+    intent: 'PROBLEMA_TECNICO',
+    serviceLabel: 'Claro Net Fibra 500 Mega',
+  })
+})
+
+test('o contexto de quem não foi identificado vem vazio, não inventado', async () => {
+  const r = await orquestrador.handle(entrada('bom dia'))
+  if (!r.success) throw new Error('falhou')
+
+  expect(r.data.context.identified).toBe(false)
+  expect(r.data.context.customerName).toBeNull()
+  expect(r.data.context.serviceLabel).toBeNull()
+  expect(r.data.context.intent).toBeNull()
+})
