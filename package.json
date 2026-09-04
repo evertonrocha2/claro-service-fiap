@@ -8,7 +8,9 @@
     "db:seed": "npm -w @sync/db run seed",
     "test": "npm run db:seed && vitest run",
     "dev": "npm -w @sync/api run dev",
-    "start": "npm -w @sync/api run start"
+    "start": "npm -w @sync/api run start",
+    "dev:site": "npm -w @sync/web-site run dev",
+    "dev:all": "npm run dev & npm run dev:site"
   },
   "type": "module",
   "private": true,
