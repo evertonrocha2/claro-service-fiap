@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sync/chat-ui": "*",
     "@sync/contracts": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

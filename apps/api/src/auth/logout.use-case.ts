@@ -1,4 +1,4 @@
-import { type Result, ok } from '@sync/contracts'
+import { ok, type Result } from '@sync/contracts'
 import type { IRefreshTokenRepository } from './refresh-token.repository.js'
 
 export type LogoutInput = { refreshToken: string }

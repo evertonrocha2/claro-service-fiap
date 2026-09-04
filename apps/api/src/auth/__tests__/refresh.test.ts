@@ -3,7 +3,7 @@ import { afterAll, beforeEach, expect, test } from 'vitest'
 import { LogoutUseCase } from '../logout.use-case.js'
 import { RefreshUseCase } from '../refresh.use-case.js'
 import { PrismaRefreshTokenRepository } from '../refresh-token.repository.js'
-import { REFRESH_TTL_SECONDS, TokenService, newRefreshToken } from '../tokens.js'
+import { newRefreshToken, REFRESH_TTL_SECONDS, TokenService } from '../tokens.js'
 
 const repo = new PrismaRefreshTokenRepository(prisma)
 const tokens = new TokenService('segredo-de-teste-com-mais-de-32-caracteres')

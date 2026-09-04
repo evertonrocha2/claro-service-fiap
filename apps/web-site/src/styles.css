@@ -158,27 +158,20 @@ body {
   gap: 26px;
 }
 
-.auth__brand,
 .topbar__brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 26px;
-  letter-spacing: -0.02em;
+  gap: 12px;
 }
 
-.auth__brand-mark,
-.topbar__mark {
-  width: 12px;
-  height: 26px;
-  border-radius: 3px;
-  background: #fff;
+.auth__logo {
+  display: flex;
+  color: #fff;
 }
 
-.topbar__mark {
-  background: var(--claro-red);
+.topbar__logo {
+  display: flex;
+  color: var(--claro-red);
 }
 
 .auth__headline {

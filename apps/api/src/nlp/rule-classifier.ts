@@ -1,4 +1,4 @@
-import { type Intent, type Result, ok } from '@sync/contracts'
+import { type Intent, ok, type Result } from '@sync/contracts'
 import { extractEntities } from './pii.js'
 import { RULES } from './rules.js'
 import { normalize } from './text.js'
@@ -40,7 +40,10 @@ export class RuleClassifier implements IIntentClassifier {
     let melhorIntencao: Intent = 'DESCONHECIDA'
     let melhorPlacar = 0
     for (const [intencao, valor] of placar) {
-      if (valor > melhorPlacar || (valor === melhorPlacar && venceEmpate(intencao, melhorIntencao))) {
+      if (
+        valor > melhorPlacar ||
+        (valor === melhorPlacar && venceEmpate(intencao, melhorIntencao))
+      ) {
         melhorPlacar = valor
         melhorIntencao = intencao
       }

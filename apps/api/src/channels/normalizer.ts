@@ -1,9 +1,9 @@
 import {
   type Channel,
-  type InboundMessage,
-  type Result,
   err,
+  type InboundMessage,
   ok,
+  type Result,
   webChannelPayloadSchema,
 } from '@sync/contracts'
 

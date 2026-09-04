@@ -1,5 +1,6 @@
+import { ClaroLogo } from '@sync/chat-ui'
 import { type FormEvent, useState } from 'react'
-import { type AgentSession, ConsoleError, api } from '../api.js'
+import { type AgentSession, api, ConsoleError } from '../api.js'
 
 export function AgentLogin({ onEntrar }: { onEntrar: (s: AgentSession) => void }) {
   const [email, setEmail] = useState('')
@@ -14,7 +15,9 @@ export function AgentLogin({ onEntrar }: { onEntrar: (s: AgentSession) => void }
     try {
       onEntrar(await api.login(email, senha))
     } catch (e) {
-      setErro(e instanceof ConsoleError ? e.message : 'Não conseguimos falar com o servidor.')
+      setErro(
+        e instanceof ConsoleError ? e.message : 'Sem conexão com o servidor. Tente novamente.',
+      )
     } finally {
       setEnviando(false)
     }
@@ -23,13 +26,12 @@ export function AgentLogin({ onEntrar }: { onEntrar: (s: AgentSession) => void }
   return (
     <div className="signin">
       <form className="signin__card" onSubmit={enviar}>
-        <div className="bar__brand">
-          <span className="bar__mark" aria-hidden="true" />
-          claro
-        </div>
+        <span className="signin__logo">
+          <ClaroLogo height={26} />
+        </span>
 
-        <h1 className="signin__title">Console de atendimento</h1>
-        <p className="signin__hint">Entre com seu e-mail da equipe.</p>
+        <h1 className="signin__title">Console de Atendimento</h1>
+        <p className="signin__hint">Acesso restrito à equipe de atendimento da Claro.</p>
 
         <label className="field">
           E-mail

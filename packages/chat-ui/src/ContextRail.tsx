@@ -1,4 +1,4 @@
-import { CHANNEL_LABELS, INTENT_LABELS, type ConversationState } from './types.js'
+import { CHANNEL_LABELS, type ConversationState, INTENT_LABELS } from './types.js'
 
 type Fato = {
   label: string
@@ -78,18 +78,13 @@ export function ContextRail({ state, onHandoff, handoffBusy }: ContextRailProps)
 
       {escalado && (
         <p className="sync-escalated">
-          Um atendente vai continuar daqui. Ele recebe esta conversa inteira, então você não
-          precisa explicar de novo.
+          Um atendente vai continuar daqui. Ele recebe esta conversa inteira, então você não precisa
+          explicar de novo.
         </p>
       )}
 
       {onHandoff && state.conversationId && !escalado && (
-        <button
-          type="button"
-          className="sync-handoff"
-          onClick={onHandoff}
-          disabled={handoffBusy}
-        >
+        <button type="button" className="sync-handoff" onClick={onHandoff} disabled={handoffBusy}>
           {handoffBusy ? 'Gerando link…' : 'Continuar no WhatsApp'}
           <small>Levamos o contexto junto</small>
         </button>

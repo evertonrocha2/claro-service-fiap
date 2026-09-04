@@ -1,6 +1,6 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
-import { PrismaIntentCacheRepository, cacheKey } from '../intent-cache.repository.js'
+import { cacheKey, PrismaIntentCacheRepository } from '../intent-cache.repository.js'
 
 const cache = new PrismaIntentCacheRepository(prisma)
 

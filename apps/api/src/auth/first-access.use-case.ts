@@ -1,4 +1,4 @@
-import { type Result, err, ok } from '@sync/contracts'
+import { err, ok, type Result } from '@sync/contracts'
 import type { ICustomerRepository } from '../context/customer.repository.js'
 import { hashPassword } from './password.js'
 

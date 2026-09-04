@@ -1,50 +1,68 @@
-import { useCallback, useEffect, useState } from 'react'
-import { type ConversationDetail, type Metrics, type QueueItem, api } from './api.js'
+import { ClaroLogo } from '@sync/chat-ui'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { api, type ConversationDetail, type Metrics, type QueueItem } from './api.js'
 import { AgentLogin } from './screens/AgentLogin.js'
 import { Board } from './screens/Board.js'
 import { Detail, EmptyDetail } from './screens/Detail.js'
+import {
+  aplicarFiltros,
+  FILTRO_VAZIO,
+  type FilterState,
+  Filters,
+  filtrosAtivos,
+} from './screens/Filters.js'
 import { History } from './screens/History.js'
 import { Pulse } from './screens/Pulse.js'
 import { useAgentSession } from './useAgentSession.js'
 
-type Aba = 'quadro' | 'historico'
+type Aba = 'fila' | 'historico'
 
 /**
  * A fila muda porque clientes chegam, não porque este atendente fez algo. Sem
  * atualizar sozinho, o console mentiria em silêncio a cada minuto parado.
- * Cinco segundos é curto o bastante para parecer vivo e longo o bastante para
- * não pesar no banco.
  */
 const INTERVALO_MS = 5000
 
 export function App() {
   const { sessao, entrar, sair } = useAgentSession()
-  const [aba, setAba] = useState<Aba>('quadro')
+  const [aba, setAba] = useState<Aba>('fila')
   const [fila, setFila] = useState<QueueItem[]>([])
-  const [resolvidos, setResolvidos] = useState<QueueItem[]>([])
+  const [encerrados, setEncerrados] = useState<QueueItem[]>([])
   const [metricas, setMetricas] = useState<Metrics | null>(null)
   const [selecionado, setSelecionado] = useState<string | null>(null)
   const [detalhe, setDetalhe] = useState<ConversationDetail | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [filtros, setFiltros] = useState<FilterState>(FILTRO_VAZIO)
 
   const token = sessao?.accessToken ?? null
+  const aberto = selecionado
 
   const carregar = useCallback(async () => {
     if (!token) return
     try {
-      const [ativos, encerrados, m] = await Promise.all([
+      const [ativos, resolvidos, m] = await Promise.all([
         api.queue(token),
         api.queue(token, { status: 'RESOLVED' }),
         api.metrics(token),
       ])
       setFila(ativos)
-      setResolvidos(encerrados)
+      setEncerrados(resolvidos)
       setMetricas(m)
       setErro(null)
+
+      // O detalhe aberto entra no mesmo ciclo: se outro atendente assumir ou
+      // encerrar o caso, a tela precisa refletir isso sem depender de clique.
+      if (aberto) {
+        try {
+          setDetalhe(await api.detail(token, aberto))
+        } catch {
+          setDetalhe(null)
+        }
+      }
     } catch {
-      setErro('Perdemos contato com o servidor. Tentando de novo.')
+      setErro('Sem conexão com o servidor. Nova tentativa em instantes.')
     }
-  }, [token])
+  }, [token, aberto])
 
   const carregarDetalhe = useCallback(
     async (id: string) => {
@@ -68,14 +86,20 @@ export function App() {
   useEffect(() => {
     if (selecionado) void carregarDetalhe(selecionado)
     else setDetalhe(null)
-  }, [selecionado, carregarDetalhe, fila])
+  }, [selecionado, carregarDetalhe])
+
+  // Trocar de aba zera o filtro: os critérios da fila não fazem sentido no
+  // histórico, e um filtro invisível herdado esconderia registros sem explicação.
+  function trocarAba(nova: Aba) {
+    setAba(nova)
+    setFiltros(FILTRO_VAZIO)
+  }
+
+  const base = aba === 'fila' ? fila : encerrados
+  const visiveis = useMemo(() => aplicarFiltros(base, filtros), [base, filtros])
 
   if (!sessao || !token) {
     return <AgentLogin onEntrar={entrar} />
-  }
-
-  function escolher(id: string) {
-    setSelecionado(id)
   }
 
   async function aposMudanca() {
@@ -86,36 +110,39 @@ export function App() {
   return (
     <div className="shell">
       <header className="bar">
-        <div className="bar__brand">
-          <span className="bar__mark" aria-hidden="true" />
-          claro
-        </div>
-        <span className="bar__where">Console de atendimento</span>
+        <span className="bar__logo">
+          <ClaroLogo height={20} />
+        </span>
+        <span className="bar__where">Console de Atendimento</span>
 
-        <nav className="bar__tabs">
+        <nav className="nav" aria-label="Seções do console">
           <button
             type="button"
-            className="tab"
-            aria-current={aba === 'quadro'}
-            onClick={() => setAba('quadro')}
+            className="nav__item"
+            aria-current={aba === 'fila'}
+            onClick={() => trocarAba('fila')}
           >
-            Quadro
+            Fila de atendimento
+            <span className="nav__badge">{fila.length}</span>
           </button>
           <button
             type="button"
-            className="tab"
+            className="nav__item"
             aria-current={aba === 'historico'}
-            onClick={() => setAba('historico')}
+            onClick={() => trocarAba('historico')}
           >
             Histórico
+            <span className="nav__badge">{encerrados.length}</span>
           </button>
         </nav>
 
         <div className="bar__right">
           {erro && <span className="notice notice--error">{erro}</span>}
-          <span className="bar__who">{sessao.agent.name}</span>
-          <span className="bar__role">
-            {sessao.agent.role === 'MANAGER' ? 'Gestão' : 'Atendimento'}
+          <span className="bar__identity">
+            <span className="bar__who">{sessao.agent.name}</span>
+            <span className="bar__role">
+              {sessao.agent.role === 'MANAGER' ? 'Gestão' : 'Atendimento'}
+            </span>
           </span>
           <button className="linkish" type="button" onClick={sair}>
             Sair
@@ -125,11 +152,24 @@ export function App() {
 
       <Pulse metrics={metricas} />
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {aba === 'quadro' ? (
-          <Board items={fila} selectedId={selecionado} onSelect={escolher} />
+      <Filters
+        value={filtros}
+        onChange={setFiltros}
+        showing={visiveis.length}
+        total={base.length}
+        withStatus={aba === 'fila'}
+      />
+
+      <div className="workarea">
+        {aba === 'fila' ? (
+          <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
         ) : (
-          <History items={resolvidos} onSelect={escolher} />
+          <History
+            items={visiveis}
+            selectedId={selecionado}
+            onSelect={setSelecionado}
+            filtered={filtrosAtivos(filtros)}
+          />
         )}
 
         {detalhe ? (

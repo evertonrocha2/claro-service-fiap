@@ -40,8 +40,5 @@ export function extractEntities(text: string): ExtractedEntities {
  * permissivo e engoliria parte do CPF.
  */
 export function redact(text: string): string {
-  return text
-    .replace(EMAIL_RE, '[EMAIL]')
-    .replace(CPF_RE, '[CPF]')
-    .replace(PHONE_RE, '[TELEFONE]')
+  return text.replace(EMAIL_RE, '[EMAIL]').replace(CPF_RE, '[CPF]').replace(PHONE_RE, '[TELEFONE]')
 }

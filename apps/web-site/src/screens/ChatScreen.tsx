@@ -1,12 +1,13 @@
 import {
   ChatComposer,
-  ChatTranscript,
   type ChatMessage,
+  ChatTranscript,
+  ClaroLogo,
   ContextRail,
   type ConversationState,
 } from '@sync/chat-ui'
 import { useState } from 'react'
-import { SyncApiError, type Session, api } from '../api.js'
+import { api, type Session, SyncApiError } from '../api.js'
 
 const ESTADO_INICIAL: ConversationState = {
   conversationId: null,
@@ -56,7 +57,7 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
       ])
     } catch (e) {
       setErro(
-        e instanceof SyncApiError ? e.message : 'Não conseguimos falar com o servidor.',
+        e instanceof SyncApiError ? e.message : 'Sem conexão com o servidor. Tente novamente.',
       )
     } finally {
       setAguardando(false)
@@ -71,9 +72,10 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
     <div className="sync app">
       <header className="topbar">
         <div className="topbar__brand">
-          <span className="topbar__mark" aria-hidden="true" />
-          claro
-          <span className="topbar__section">Atendimento</span>
+          <span className="topbar__logo">
+            <ClaroLogo height={22} />
+          </span>
+          <span className="topbar__section">Central de Atendimento</span>
         </div>
 
         <div className="topbar__account">
@@ -102,11 +104,7 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
             </p>
           )}
 
-          <ChatComposer
-            onSend={enviar}
-            disabled={aguardando}
-            placeholder="Escreva sua mensagem"
-          />
+          <ChatComposer onSend={enviar} disabled={aguardando} placeholder="Escreva sua mensagem" />
         </section>
 
         <ContextRail state={estado} />

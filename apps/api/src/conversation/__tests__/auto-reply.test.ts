@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { type ReplyContext, buildAutoReply, buildEscalationReply } from '../auto-reply.js'
+import { buildAutoReply, buildEscalationReply, type ReplyContext } from '../auto-reply.js'
 
 const identificado: ReplyContext = {
   customerName: 'Maria Silva',

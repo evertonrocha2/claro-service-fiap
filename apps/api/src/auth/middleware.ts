@@ -1,6 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
-import type { TokenSubject } from './tokens.js'
-import type { TokenService } from './tokens.js'
+import type { TokenService, TokenSubject } from './tokens.js'
 
 declare global {
   namespace Express {
@@ -42,7 +41,9 @@ export function requireAuth(tokens: TokenService): RequestHandler {
     const r = token ? await tokens.verifyAccess(token) : null
 
     if (!r?.success) {
-      res.status(401).json({ error: { code: 'NAO_AUTENTICADO', message: 'Faça login para continuar.' } })
+      res
+        .status(401)
+        .json({ error: { code: 'NAO_AUTENTICADO', message: 'Faça login para continuar.' } })
       return
     }
 

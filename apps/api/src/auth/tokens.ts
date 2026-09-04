@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { type Result, err, ok } from '@sync/contracts'
-import { SignJWT, jwtVerify } from 'jose'
+import { err, ok, type Result } from '@sync/contracts'
+import { jwtVerify, SignJWT } from 'jose'
 
 export const ACCESS_TTL_SECONDS = 15 * 60
 export const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60

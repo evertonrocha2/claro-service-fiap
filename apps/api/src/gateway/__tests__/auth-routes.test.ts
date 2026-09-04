@@ -6,7 +6,11 @@ import { buildContainer } from '../container.js'
 
 const app = createApp(buildContainer())
 
-const CADASTRO = { cpf: '123.456.789-00', email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' }
+const CADASTRO = {
+  cpf: '123.456.789-00',
+  email: 'maria.silva@exemplo.com',
+  password: 'MinhaSenha123',
+}
 
 beforeEach(async () => {
   await prisma.refreshToken.deleteMany()

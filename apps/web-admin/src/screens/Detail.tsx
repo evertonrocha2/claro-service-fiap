@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import {
+  api,
   CHANNEL_LABELS,
   ConsoleError,
   type ConversationDetail,
+  formatWait,
   INTENT_COLUMNS,
   STATUS_LABELS,
-  formatWait,
-  api,
 } from '../api.js'
 
 const QUEM: Record<ConversationDetail['messages'][number]['sender'], string> = {
@@ -16,7 +16,7 @@ const QUEM: Record<ConversationDetail['messages'][number]['sender'], string> = {
 }
 
 function intentLabel(intent: ConversationDetail['intent']): string {
-  if (!intent) return 'Ainda identificando'
+  if (!intent) return 'Em classificação'
   return INTENT_COLUMNS.find((c) => c.intent === intent)?.label ?? intent
 }
 
@@ -59,36 +59,34 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
       </header>
 
       <div className="detail__facts">
-        <div>
+        <div className="fact">
           <span className="fact__label">Assunto</span>
           <span className="fact__value">{intentLabel(detail.intent)}</span>
         </div>
-        <div>
+        <div className="fact">
           <span className="fact__label">Situação</span>
           <span className="fact__value">{STATUS_LABELS[detail.status]}</span>
         </div>
-        <div>
-          <span className="fact__label">Canal agora</span>
+        <div className="fact">
+          <span className="fact__label">Canal atual</span>
           <span className="fact__value">{CHANNEL_LABELS[detail.channel]}</span>
         </div>
-        <div>
-          <span className="fact__label">Começou em</span>
+        <div className="fact">
+          <span className="fact__label">Canal de origem</span>
           <span className="fact__value">{CHANNEL_LABELS[detail.originChannel]}</span>
         </div>
-        <div>
+        <div className="fact">
           <span className="fact__label">CPF</span>
           <span className="fact__value fact__value--mono">
-            {detail.customerCpfMasked ?? 'não informado'}
+            {detail.customerCpfMasked ?? 'Não informado'}
           </span>
         </div>
-        <div>
-          <span className="fact__label">Esperando há</span>
-          <span className="fact__value fact__value--mono">
-            {formatWait(detail.waitingSeconds)}
-          </span>
+        <div className="fact">
+          <span className="fact__label">Tempo de espera</span>
+          <span className="fact__value fact__value--mono">{formatWait(detail.waitingSeconds)}</span>
         </div>
         {detail.serviceLabel && (
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div className="fact fact--wide">
             <span className="fact__label">Serviço</span>
             <span className="fact__value">{detail.serviceLabel}</span>
           </div>
@@ -112,11 +110,14 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
         )}
 
         {encerrado ? (
-          <p className="notice">Atendimento encerrado. O histórico fica guardado.</p>
+          <p className="notice">
+            Atendimento encerrado. O histórico permanece disponível para consulta.
+          </p>
         ) : podeAssumir ? (
           <>
             <p className="notice">
-              O cliente já contou tudo acima. Assuma para responder sem pedir nada de novo.
+              O cliente já registrou a solicitação acima. Assuma o atendimento para responder sem
+              solicitar as informações novamente.
             </p>
             <button
               className="btn btn--primary"
@@ -133,7 +134,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
               <textarea
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
-                placeholder="Escreva para o cliente"
+                placeholder="Escreva a resposta ao cliente"
                 rows={2}
                 aria-label="Resposta ao cliente"
                 disabled={ocupado || !meu}
@@ -164,8 +165,9 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
             </div>
             {!meu && (
               <p className="notice">
-                Este atendimento está com {detail.assignedAgentName ?? 'a IA'}. Você pode
-                acompanhar, mas não responder.
+                Atendimento sob responsabilidade de{' '}
+                {detail.assignedAgentName ?? 'atendimento automático'}. Consulta permitida, resposta
+                indisponível.
               </p>
             )}
           </>
@@ -178,7 +180,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
 export function EmptyDetail() {
   return (
     <div className="empty-detail">
-      Escolha alguém no quadro para ver a conversa inteira e o que o Sync já descobriu.
+      Selecione um atendimento para visualizar o histórico completo e os dados já identificados.
     </div>
   )
 }

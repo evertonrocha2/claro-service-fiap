@@ -1,5 +1,5 @@
-import { CHANNELS, CONVERSATION_STATUSES, INTENTS, type Result, err } from '@sync/contracts'
-import { type Request, type Response, type Router, Router as makeRouter } from 'express'
+import { CHANNELS, CONVERSATION_STATUSES, err, INTENTS, type Result } from '@sync/contracts'
+import { Router as makeRouter, type Request, type Response, type Router } from 'express'
 import { z } from 'zod'
 import { requireAuth } from '../auth/middleware.js'
 import type { TokenService } from '../auth/tokens.js'

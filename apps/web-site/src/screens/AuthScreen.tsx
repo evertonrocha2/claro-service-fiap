@@ -1,5 +1,6 @@
+import { ClaroLogo } from '@sync/chat-ui'
 import { type FormEvent, useState } from 'react'
-import { SyncApiError, type Session, api } from '../api.js'
+import { api, type Session, SyncApiError } from '../api.js'
 
 type Modo = 'entrar' | 'primeiro-acesso'
 
@@ -34,7 +35,7 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
       }
     } catch (e) {
       setErro(
-        e instanceof SyncApiError ? e.message : 'Não conseguimos falar com o servidor.',
+        e instanceof SyncApiError ? e.message : 'Sem conexão com o servidor. Tente novamente.',
       )
     } finally {
       setEnviando(false)
@@ -50,10 +51,9 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
   return (
     <div className="auth">
       <section className="auth__pitch">
-        <div className="auth__brand">
-          <span className="auth__brand-mark" aria-hidden="true" />
-          claro
-        </div>
+        <span className="auth__logo">
+          <ClaroLogo height={34} />
+        </span>
 
         <h1 className="auth__headline">
           Comece aqui.
@@ -62,24 +62,24 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
         </h1>
 
         <p className="auth__sub">
-          Seu atendimento continua do mesmo ponto no site, no app ou no WhatsApp. Você não
-          repete nada.
+          Seu atendimento continua do mesmo ponto no site, no app ou no WhatsApp. Você não repete
+          nada.
         </p>
 
         <ol className="auth__steps">
           <li>
             <div>
-              <span>Site</span> você conta o problema
+              <span>Site</span> Você descreve o problema
             </div>
           </li>
           <li>
             <div>
-              <span>WhatsApp</span> a conversa continua de onde parou
+              <span>WhatsApp</span> A conversa continua do mesmo ponto
             </div>
           </li>
           <li>
             <div>
-              <span>Atendente</span> recebe o histórico junto
+              <span>Atendente</span> Recebe o histórico completo
             </div>
           </li>
         </ol>
@@ -164,7 +164,7 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
           </div>
 
           <button className="btn btn--ghost" type="button" onClick={onSkip}>
-            Falar sem entrar
+            Continuar sem identificação
           </button>
         </form>
       </section>

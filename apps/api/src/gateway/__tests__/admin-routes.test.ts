@@ -105,7 +105,9 @@ test('o CPF completo nunca sai na resposta da área interna', async () => {
   const id = await conversaNaFila()
   const token = await tokenDeAtendente()
 
-  const fila = await request(app).get('/api/admin/conversations').set('Authorization', `Bearer ${token}`)
+  const fila = await request(app)
+    .get('/api/admin/conversations')
+    .set('Authorization', `Bearer ${token}`)
   const detalhe = await request(app)
     .get(`/api/admin/conversations/${id}`)
     .set('Authorization', `Bearer ${token}`)
@@ -121,7 +123,9 @@ test('assumir, responder e resolver, o ciclo do atendente', async () => {
   const token = await tokenDeAtendente()
   const auth = { Authorization: `Bearer ${token}` }
 
-  expect((await request(app).post(`/api/admin/conversations/${id}/claim`).set(auth)).status).toBe(200)
+  expect((await request(app).post(`/api/admin/conversations/${id}/claim`).set(auth)).status).toBe(
+    200,
+  )
 
   const resposta = await request(app)
     .post(`/api/admin/conversations/${id}/messages`)
@@ -129,7 +133,9 @@ test('assumir, responder e resolver, o ciclo do atendente', async () => {
     .send({ text: 'Oi Maria. Antes de cancelar, posso ver uma oferta melhor?' })
   expect(resposta.status).toBe(200)
 
-  expect((await request(app).post(`/api/admin/conversations/${id}/resolve`).set(auth)).status).toBe(200)
+  expect((await request(app).post(`/api/admin/conversations/${id}/resolve`).set(auth)).status).toBe(
+    200,
+  )
 
   const depois = await request(app).get(`/api/admin/conversations/${id}`).set(auth)
   expect(depois.body.status).toBe('RESOLVED')

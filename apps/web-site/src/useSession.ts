@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type Session, api } from './api.js'
+import { api, type Session } from './api.js'
 
 const CHAVE = 'sync.sessao'
 

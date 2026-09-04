@@ -9,7 +9,7 @@ import type {
 import type { IIdentityService } from '../identity/identity.service.js'
 import { extractEntities } from '../nlp/pii.js'
 import type { IIntentClassifier } from '../nlp/types.js'
-import { type ReplyContext, buildAutoReply, buildEscalationReply } from './auto-reply.js'
+import { buildAutoReply, buildEscalationReply, type ReplyContext } from './auto-reply.js'
 import { decide } from './escalation-policy.js'
 
 export type HandleResult = {

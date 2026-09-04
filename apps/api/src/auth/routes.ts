@@ -1,5 +1,5 @@
-import { type Result, err } from '@sync/contracts'
-import { type Router, type Request, type Response, Router as makeRouter } from 'express'
+import { err, type Result } from '@sync/contracts'
+import { Router as makeRouter, type Request, type Response, type Router } from 'express'
 import { z } from 'zod'
 import type { FirstAccessUseCase } from './first-access.use-case.js'
 import type { LoginUseCase } from './login.use-case.js'
@@ -33,11 +33,7 @@ const refreshSchema = z.object({
 })
 
 /** Códigos de erro que viram 401 em vez de 400. */
-const NAO_AUTORIZADO = new Set([
-  'CREDENCIAIS_INVALIDAS',
-  'REFRESH_INVALIDO',
-  'REFRESH_REUSADO',
-])
+const NAO_AUTORIZADO = new Set(['CREDENCIAIS_INVALIDAS', 'REFRESH_INVALIDO', 'REFRESH_REUSADO'])
 
 function responder<T>(res: Response, resultado: Result<T>): void {
   if (resultado.success) {

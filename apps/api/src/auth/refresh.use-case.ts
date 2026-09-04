@@ -1,6 +1,6 @@
-import { type Result, err, ok } from '@sync/contracts'
+import { err, ok, type Result } from '@sync/contracts'
 import type { IRefreshTokenRepository } from './refresh-token.repository.js'
-import { REFRESH_TTL_SECONDS, type TokenService, newRefreshToken } from './tokens.js'
+import { newRefreshToken, REFRESH_TTL_SECONDS, type TokenService } from './tokens.js'
 
 export type RefreshInput = { refreshToken: string }
 

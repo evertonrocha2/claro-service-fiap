@@ -1,10 +1,4 @@
-import {
-  CHANNEL_LABELS,
-  INTENT_COLUMNS,
-  type QueueItem,
-  formatWait,
-  waitHeat,
-} from '../api.js'
+import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
 
 export type BoardProps = {
   items: QueueItem[]
@@ -27,7 +21,7 @@ function Card({
   const urgente = item.waitingSeconds >= URGENTE_SEGUNDOS
 
   return (
-    <button type="button" className="card" aria-selected={selected} onClick={onSelect}>
+    <button type="button" className="card" aria-current={selected} onClick={onSelect}>
       {/* A barra cresce com a espera e vira vermelha ao passar de cinco minutos. */}
       <span
         className={`card__spine ${urgente ? 'card__spine--urgent' : ''}`}
@@ -48,7 +42,9 @@ function Card({
         {item.originChannel !== item.channel && (
           <>
             <span aria-hidden="true">·</span>
-            <span title="Começou em outro canal">veio do {CHANNEL_LABELS[item.originChannel]}</span>
+            <span title="Atendimento iniciado em outro canal">
+              origem {CHANNEL_LABELS[item.originChannel]}
+            </span>
           </>
         )}
       </div>
@@ -84,7 +80,7 @@ export function Board({ items, selectedId, onSelect }: BoardProps) {
 
             <div className="column__body">
               {daColuna.length === 0 ? (
-                <p className="column__empty">Ninguém esperando aqui.</p>
+                <p className="column__empty">Nenhum atendimento nesta fila.</p>
               ) : (
                 daColuna.map((item) => (
                   <Card

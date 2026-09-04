@@ -145,7 +145,7 @@ async function main() {
   await sleep(2000)
   await cdp.shot('5-respondido')
 
-  await cdp.eval(CLICAR('Histórico', '.tab'))
+  await cdp.eval(CLICAR('Histórico', '.nav__item'))
   await sleep(1500)
   await cdp.shot('6-historico')
 

@@ -1,5 +1,4 @@
-import { type Intent, type Result, err, ok } from '@sync/contracts'
-import { INTENTS } from '@sync/contracts'
+import { err, INTENTS, type Intent, ok, type Result } from '@sync/contracts'
 import { extractEntities, redact } from './pii.js'
 import type { Classification, ClassifyInput, IIntentClassifier } from './types.js'
 

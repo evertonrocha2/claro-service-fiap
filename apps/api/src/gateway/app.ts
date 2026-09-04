@@ -26,35 +26,37 @@ export function createApp(deps: Container): Express {
     '/api/channels/:channel/messages',
     optionalAuth(deps.auth.tokens),
     async (req: Request, res: Response) => {
-    const bruto = req.params.channel
-    const channel = parseChannel(Array.isArray(bruto) ? (bruto[0] ?? '') : (bruto ?? ''))
-    if (!channel) {
-      res.status(400).json({ error: { code: 'CANAL_INVALIDO', message: 'Canal não reconhecido.' } })
-      return
-    }
-
-    // O customerId sai do token, nunca do corpo da requisicao: aceitar do corpo
-    // deixaria qualquer um conversar como se fosse outro cliente.
-    const auth = req.auth?.kind === 'CUSTOMER' ? { customerId: req.auth.subjectId } : {}
-    const normalizado = normalizeWebPayload(channel, req.body, auth)
-    if (!normalizado.success) {
-      res.status(400).json({ error: normalizado.error })
-      return
-    }
-
-    try {
-      const resultado = await deps.orchestrator.handle(normalizado.data)
-      if (!resultado.success) {
-        res.status(500).json({ error: resultado.error })
+      const bruto = req.params.channel
+      const channel = parseChannel(Array.isArray(bruto) ? (bruto[0] ?? '') : (bruto ?? ''))
+      if (!channel) {
+        res
+          .status(400)
+          .json({ error: { code: 'CANAL_INVALIDO', message: 'Canal não reconhecido.' } })
         return
       }
-      res.json(resultado.data)
-    } catch {
-      res.status(500).json({
-        error: { code: 'ERRO_INTERNO', message: 'Não foi possível processar a mensagem.' },
-      })
-    }
-  },
+
+      // O customerId sai do token, nunca do corpo da requisicao: aceitar do corpo
+      // deixaria qualquer um conversar como se fosse outro cliente.
+      const auth = req.auth?.kind === 'CUSTOMER' ? { customerId: req.auth.subjectId } : {}
+      const normalizado = normalizeWebPayload(channel, req.body, auth)
+      if (!normalizado.success) {
+        res.status(400).json({ error: normalizado.error })
+        return
+      }
+
+      try {
+        const resultado = await deps.orchestrator.handle(normalizado.data)
+        if (!resultado.success) {
+          res.status(500).json({ error: resultado.error })
+          return
+        }
+        res.json(resultado.data)
+      } catch {
+        res.status(500).json({
+          error: { code: 'ERRO_INTERNO', message: 'Não foi possível processar a mensagem.' },
+        })
+      }
+    },
   )
 
   return app

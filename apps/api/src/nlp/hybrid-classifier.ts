@@ -1,4 +1,4 @@
-import { type Result, ok } from '@sync/contracts'
+import { ok, type Result } from '@sync/contracts'
 import type { IIntentCacheRepository } from './intent-cache.repository.js'
 import { redact } from './pii.js'
 import type { Classification, ClassifyInput, IIntentClassifier } from './types.js'

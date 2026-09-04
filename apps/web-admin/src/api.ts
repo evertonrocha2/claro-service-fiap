@@ -119,11 +119,11 @@ export const api = {
  */
 export const INTENT_COLUMNS: { intent: Intent; label: string; short: string }[] = [
   { intent: 'CANCELAMENTO', label: 'Cancelamento', short: 'Cancelamento' },
-  { intent: 'FALAR_COM_ATENDENTE', label: 'Pediu atendente', short: 'Pediu atendente' },
+  { intent: 'FALAR_COM_ATENDENTE', label: 'Solicitou atendente', short: 'Solicitou atendente' },
   { intent: 'PROBLEMA_TECNICO', label: 'Problema técnico', short: 'Técnico' },
   { intent: 'FATURA_SEGUNDA_VIA', label: 'Fatura', short: 'Fatura' },
   { intent: 'CONSULTA_PLANO', label: 'Plano', short: 'Plano' },
-  { intent: 'DESCONHECIDA', label: 'Sem intenção clara', short: 'Sem intenção' },
+  { intent: 'DESCONHECIDA', label: 'Não classificado', short: 'Não classificado' },
 ]
 
 export const CHANNEL_LABELS: Record<Channel, string> = {
@@ -133,8 +133,8 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 }
 
 export const STATUS_LABELS: Record<ConversationStatus, string> = {
-  BOT: 'Com a IA',
-  WAITING_HUMAN: 'Esperando',
+  BOT: 'Atendimento automático',
+  WAITING_HUMAN: 'Aguardando',
   WITH_HUMAN: 'Em atendimento',
   RESOLVED: 'Resolvido',
 }

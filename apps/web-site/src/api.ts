@@ -18,7 +18,10 @@ export type SendMessageResult = {
 }
 
 export class SyncApiError extends Error {
-  constructor(readonly code: string, message: string) {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
     super(message)
   }
 }
@@ -50,8 +53,7 @@ export const api = {
   firstAccess: (cpf: string, email: string, password: string) =>
     post<{ customerId: string }>('/api/auth/first-access', { cpf, email, password }),
 
-  login: (email: string, password: string) =>
-    post<Session>('/api/auth/login', { email, password }),
+  login: (email: string, password: string) => post<Session>('/api/auth/login', { email, password }),
 
   logout: (refreshToken: string) => post<{ ok: true }>('/api/auth/logout', { refreshToken }),
 

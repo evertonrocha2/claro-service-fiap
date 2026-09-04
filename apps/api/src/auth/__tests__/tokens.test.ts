@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { ACCESS_TTL_SECONDS, TokenService, hashRefreshToken, newRefreshToken } from '../tokens.js'
+import { ACCESS_TTL_SECONDS, hashRefreshToken, newRefreshToken, TokenService } from '../tokens.js'
 
 const servico = new TokenService('segredo-de-teste-com-mais-de-32-caracteres')
 

@@ -69,9 +69,7 @@ test('a chave vai no cabeçalho, nunca na URL', async () => {
 
   const chamada = espiao.chamadas[0]
   expect(chamada?.url).not.toContain('chave-de-teste')
-  expect((chamada?.init.headers as Record<string, string>)['x-goog-api-key']).toBe(
-    'chave-de-teste',
-  )
+  expect((chamada?.init.headers as Record<string, string>)['x-goog-api-key']).toBe('chave-de-teste')
 })
 
 test('intenção fora da taxonomia é rejeitada em vez de propagada', async () => {
@@ -86,7 +84,7 @@ test('intenção fora da taxonomia é rejeitada em vez de propagada', async () =
 
 test('erro HTTP vira Result de falha, não exceção', async () => {
   const r = await classificador(
-    (vi.fn(async () => new Response('quota', { status: 429 })) as unknown) as typeof fetch,
+    vi.fn(async () => new Response('quota', { status: 429 })) as unknown as typeof fetch,
   ).classify({ text: 'oi' })
 
   expect(r.success).toBe(false)
@@ -96,9 +94,9 @@ test('erro HTTP vira Result de falha, não exceção', async () => {
 
 test('rede fora do ar vira Result de falha', async () => {
   const r = await classificador(
-    (vi.fn(async () => {
+    vi.fn(async () => {
       throw new Error('ECONNREFUSED')
-    }) as unknown) as typeof fetch,
+    }) as unknown as typeof fetch,
   ).classify({ text: 'oi' })
 
   expect(r.success).toBe(false)
