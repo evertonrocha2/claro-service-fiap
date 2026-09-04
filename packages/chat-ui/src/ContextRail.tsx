@@ -71,7 +71,7 @@ export function ContextRail({ state, onHandoff, handoffBusy }: ContextRailProps)
 
       {state.protocol && (
         <div className="sync-protocol">
-          <span className="sync-fact__label">Protocolo</span>
+          <span className="sync-fact__label sync-protocol__label">Protocolo</span>
           <div className="sync-protocol__number">{state.protocol}</div>
         </div>
       )}

@@ -68,13 +68,19 @@ export function AuthScreen({ onAuthenticated, onSkip }: AuthScreenProps) {
 
         <ol className="auth__steps">
           <li>
-            <span>Site</span> você conta o problema
+            <div>
+              <span>Site</span> você conta o problema
+            </div>
           </li>
           <li>
-            <span>WhatsApp</span> a conversa continua de onde parou
+            <div>
+              <span>WhatsApp</span> a conversa continua de onde parou
+            </div>
           </li>
           <li>
-            <span>Atendente</span> recebe o histórico junto
+            <div>
+              <span>Atendente</span> recebe o histórico junto
+            </div>
           </li>
         </ol>
       </section>

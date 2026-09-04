@@ -28,24 +28,26 @@ export function ChatComposer({ onSend, disabled, placeholder }: ChatComposerProp
 
   return (
     <form className="sync-composer" onSubmit={enviar}>
-      <textarea
-        className="sync-composer__input"
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        onKeyDown={aoTeclar}
-        placeholder={placeholder}
-        rows={1}
-        aria-label="Sua mensagem"
-        disabled={disabled}
-      />
-      <button
-        className="sync-composer__send"
-        type="submit"
-        disabled={!podeEnviar}
-        aria-label="Enviar mensagem"
-      >
-        ↑
-      </button>
+      <div className="sync-composer__inner">
+        <textarea
+          className="sync-composer__input"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={aoTeclar}
+          placeholder={placeholder}
+          rows={1}
+          aria-label="Sua mensagem"
+          disabled={disabled}
+        />
+        <button
+          className="sync-composer__send"
+          type="submit"
+          disabled={!podeEnviar}
+          aria-label="Enviar mensagem"
+        >
+          ↑
+        </button>
+      </div>
     </form>
   )
 }

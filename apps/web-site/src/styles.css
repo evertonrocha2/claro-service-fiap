@@ -237,6 +237,11 @@ body {
   font-weight: 800;
   color: #fff;
   display: block;
+  margin-bottom: 2px;
+}
+
+.auth__steps li > div {
+  line-height: 1.4;
 }
 
 .auth__panel {

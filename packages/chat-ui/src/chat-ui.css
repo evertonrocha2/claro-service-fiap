@@ -28,6 +28,17 @@
   overflow-y: auto;
   flex: 1;
   scroll-behavior: smooth;
+  /* A conversa nao acompanha a largura da tela: linha longa demais cansa de ler
+     e afasta as duas pontas do dialogo ate parecerem conversas separadas. */
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* Ancora as mensagens embaixo enquanto sao poucas, como todo chat faz, sem
+   quebrar o scroll quando passam a encher a tela. */
+.sync-transcript > *:first-child {
+  margin-top: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -142,6 +153,16 @@
   padding: 16px 24px 24px;
   border-top: 1px solid var(--line);
   background: var(--card);
+}
+
+/* Alinhado a mesma coluna da conversa. O campo terminar numa largura e as
+   mensagens em outra faz a tela parecer montada por duas pessoas diferentes. */
+.sync-composer__inner {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
 .sync-composer__input {
@@ -265,6 +286,7 @@
 }
 
 .sync-fact__label {
+  display: block;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -273,6 +295,7 @@
 }
 
 .sync-fact__value {
+  display: block;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
@@ -348,17 +371,48 @@
 
 @media (max-width: 820px) {
   .sync-rail {
+    /* Sobe para logo abaixo do cabeçalho. Empilhado na ordem do documento a
+       trilha cairia embaixo do compositor, onde ninguém veria. */
+    order: -1;
     width: auto;
+    flex-shrink: 0;
+    overflow: visible;
     border-left: none;
     border-bottom: 1px solid var(--line);
-    padding: 14px 16px;
-    gap: 12px;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .sync-rail__title {
+    font-size: 10px;
+  }
+
+  /* A nota de privacidade fica só no desktop. No celular ela empurraria a
+     conversa para fora da tela, e o essencial são os fatos. */
+  .sync-rail__note {
+    display: none;
+  }
+
+  .sync-protocol {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .sync-protocol__number {
+    font-size: 13px;
+    margin-top: 0;
   }
 
   .sync-facts {
     flex-direction: row;
     overflow-x: auto;
     gap: 8px;
+    scrollbar-width: none;
+  }
+
+  .sync-facts::-webkit-scrollbar {
+    display: none;
   }
 
   .sync-fact {
@@ -377,6 +431,14 @@
 
   .sync-fact__label {
     display: none;
+  }
+
+  .sync-protocol__label {
+    display: block;
+  }
+
+  .sync-fact__value {
+    font-size: 13px;
   }
 
   .sync-handoff {
