@@ -1,0 +1,23 @@
+{
+  "name": "sync",
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "biome check .",
+    "db:up": "docker compose up -d --wait",
+    "db:migrate": "npm -w @sync/db run migrate",
+    "db:seed": "npm -w @sync/db run seed",
+    "test": "npm run db:seed && vitest run"
+  },
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
