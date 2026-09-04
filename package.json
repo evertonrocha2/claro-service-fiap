@@ -6,7 +6,9 @@
     "db:up": "docker compose up -d --wait",
     "db:migrate": "npm -w @sync/db run migrate",
     "db:seed": "npm -w @sync/db run seed",
-    "test": "npm run db:seed && vitest run"
+    "test": "npm run db:seed && vitest run",
+    "dev": "npm -w @sync/api run dev",
+    "start": "npm -w @sync/api run start"
   },
   "type": "module",
   "private": true,
