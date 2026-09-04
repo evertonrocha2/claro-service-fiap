@@ -562,6 +562,20 @@ button {
   box-shadow: 0 1px 4px rgb(26 29 33 / 0.09);
 }
 
+/* A conversa da IA fica visivel sem competir com quem espera uma pessoa. */
+.card--bot {
+  border-left-color: #c7ccd4;
+  background: var(--bg);
+}
+
+.card__bot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
 .card.is-selected {
   border-color: var(--claro-red);
   box-shadow: 0 0 0 1px var(--claro-red);

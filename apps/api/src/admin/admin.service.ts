@@ -74,8 +74,22 @@ export function maskCpf(cpf: string): string {
   return `***.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-**`
 }
 
-/** O quadro e a fila humana. Conversa ainda com a IA nao espera ninguem. */
-const PRECISAM_DE_GENTE: ConversationStatus[] = ['WAITING_HUMAN', 'WITH_HUMAN']
+/**
+ * O que aparece no quadro.
+ *
+ * BOT entrou aqui depois. A regra do produto e que o atendente pode assumir
+ * quando quiser, e a IA cala a boca a partir dai. Isso era impossivel: conversa
+ * com a assistente nao aparecia em lugar nenhum do console, so como um numero
+ * na faixa de indicadores, e o `claim` recusava. Nao da para assumir o que nao
+ * se ve.
+ *
+ * O cartao do BOT sai marcado no quadro, para a fila nao perder o sentido de
+ * "quem esta esperando uma pessoa".
+ */
+const PRECISAM_DE_GENTE: ConversationStatus[] = ['BOT', 'WAITING_HUMAN', 'WITH_HUMAN']
+
+/** Quem ainda nao tem dono. O atendente pode entrar nos dois. */
+const SEM_DONO: ConversationStatus[] = ['BOT', 'WAITING_HUMAN']
 
 export class AdminService {
   constructor(
@@ -172,16 +186,48 @@ export class AdminService {
   }
 
   /** Assumir é uma corrida: dois atendentes clicam no mesmo card ao mesmo tempo. */
+  /**
+   * O atendente entra na conversa, e a IA para de responder a partir daqui.
+   *
+   * Aceita BOT, e nao so WAITING_HUMAN. Antes, tentar assumir uma conversa que a
+   * assistente ainda conduzia devolvia "outro atendente assumiu este
+   * atendimento", que alem de recusar mentia sobre o motivo: ninguem tinha
+   * assumido, o status e que nao era o esperado.
+   *
+   * O silencio em si nao mora aqui: o orquestrador ja se cala em WITH_HUMAN, nos
+   * dois canais. O que faltava era conseguir chegar nesse status.
+   */
   async claim(id: string, agentId: string): Promise<Result<{ ok: true }>> {
+    const antes = await this.db.conversation.findUnique({ where: { id } })
+    if (!antes) return err('ATENDIMENTO_NAO_ENCONTRADO', 'Este atendimento nao existe.')
+
     const atualizados = await this.db.conversation.updateMany({
-      where: { id, status: 'WAITING_HUMAN' },
+      where: { id, status: { in: SEM_DONO } },
       // claimedAt e o inicio do trabalho humano. Sem ele o tempo de atendimento
       // sairia contaminado pela espera na fila, que nao e do atendente.
       data: { status: 'WITH_HUMAN', assignedAgentId: agentId, claimedAt: new Date() },
     })
 
     if (atualizados.count === 0) {
-      return err('ATENDIMENTO_JA_ASSUMIDO', 'Outro atendente assumiu este atendimento.')
+      return antes.status === 'RESOLVED'
+        ? err('ATENDIMENTO_ENCERRADO', 'Este atendimento ja foi encerrado.')
+        : err('ATENDIMENTO_JA_ASSUMIDO', 'Outro atendente assumiu este atendimento.')
+    }
+
+    // Avisa quem esta do outro lado, e so quando a assistente estava conduzindo.
+    // Em WAITING_HUMAN o bot ja disse que ia transferir; aqui a pessoa estava no
+    // meio de um dialogo com a IA e veria a IA emudecer sem explicacao.
+    if (antes.status === 'BOT') {
+      const atendente = await this.db.agent.findUnique({ where: { id: agentId } })
+      const nome = atendente?.name.split(' ')[0] ?? 'Um atendente'
+
+      await this.messages.append({
+        conversationId: id,
+        channel: antes.currentChannel,
+        direction: 'OUTBOUND',
+        sender: 'BOT',
+        text: `${nome}, da equipe da Claro, entrou na conversa e segue com voce a partir daqui.`,
+      })
     }
 
     await this.gerarSugestao(id)

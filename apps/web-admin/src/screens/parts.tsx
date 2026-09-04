@@ -184,7 +184,12 @@ export function Actions({ token, detail, agentId, onChanged }: ActionsProps) {
   // Comparar por id, não por status: sem isso qualquer atendimento em andamento
   // pareceria meu, e o atendente só descobriria o contrário ao ver o envio falhar.
   const meu = detail.assignedAgentId === agentId && detail.status === 'WITH_HUMAN'
-  const podeAssumir = detail.status === 'WAITING_HUMAN'
+
+  // Assumir vale também enquanto a assistente conduz. O botão só aparecia em
+  // WAITING_HUMAN, então a regra "atendente assumiu, a IA cala" não tinha por
+  // onde ser acionada: o atendente esperava a conversa escalar sozinha.
+  const comAssistente = detail.status === 'BOT'
+  const podeAssumir = comAssistente || detail.status === 'WAITING_HUMAN'
   const encerrado = detail.status === 'RESOLVED'
 
   async function agir(acao: () => Promise<unknown>) {
@@ -215,8 +220,9 @@ export function Actions({ token, detail, agentId, onChanged }: ActionsProps) {
       ) : podeAssumir ? (
         <>
           <p className="notice">
-            O cliente já registrou a solicitação acima. Assuma o atendimento para responder sem
-            solicitar as informações novamente.
+            {comAssistente
+              ? 'A assistente está conduzindo esta conversa. Ao assumir, ela para de responder e você segue com o cliente.'
+              : 'O cliente já registrou a solicitação acima. Assuma o atendimento para responder sem solicitar as informações novamente.'}
           </p>
           <button
             className="btn btn--primary"
@@ -225,7 +231,7 @@ export function Actions({ token, detail, agentId, onChanged }: ActionsProps) {
             onClick={() => agir(() => api.claim(token, detail.id))}
           >
             <Hand size={15} strokeWidth={2} />
-            Assumir atendimento
+            {comAssistente ? 'Assumir e silenciar a assistente' : 'Assumir atendimento'}
           </button>
         </>
       ) : (

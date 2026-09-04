@@ -17,6 +17,10 @@ export function filtrosAtivos(f: FilterState): boolean {
 const CANAIS: Channel[] = ['SITE', 'APP', 'WHATSAPP']
 
 const SITUACOES: { value: ConversationStatus; label: string }[] = [
+  // A assistente entrou na lista quando o quadro passou a mostrar as conversas
+  // dela. Sem este filtro nao ha como olhar so o que a IA esta conduzindo, que
+  // e onde o atendente decide se entra.
+  { value: 'BOT', label: 'Com a assistente' },
   { value: 'WAITING_HUMAN', label: 'Aguardando' },
   { value: 'WITH_HUMAN', label: 'Em atendimento' },
 ]

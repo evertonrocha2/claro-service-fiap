@@ -171,16 +171,39 @@ test('taxa de resolução automática conta só quem nunca passou por humano', a
   expect(m.botResolutionRate).toBeCloseTo(0.5)
 })
 
-test('o quadro é a fila humana: conversa ainda com a IA não aparece', async () => {
+test('o quadro mostra também as conversas que ainda estão com a IA', async () => {
   const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE', customerId: cliente.id })
+  const c = await conversas.create({
+    originChannel: 'SITE',
+    currentChannel: 'SITE',
+    customerId: cliente.id,
+  })
 
-  // Criada com status BOT. Ninguém está esperando um humano, então não é fila.
-  expect(await admin.queue({})).toHaveLength(0)
+  // Este teste dizia o contrário, e travava a regra errada.
+  //
+  // O quadro era só a fila humana, com o argumento de que conversa com a
+  // assistente não espera ninguém. Verdade, mas isso tornava impossível a regra
+  // do produto: o atendente pode assumir quando quiser, e a partir daí a IA para
+  // de responder. Não dá para assumir o que não aparece em lugar nenhum.
+  const fila = await admin.queue({})
+  expect(fila.map((i) => i.id)).toContain(c.id)
+  expect(fila.find((i) => i.id === c.id)?.status).toBe('BOT')
 
+  // A faixa de indicadores continua separando as duas coisas: ninguém está
+  // esperando uma pessoa nesta conversa.
   const m = await admin.metrics()
   expect(m.withBot).toBe(1)
   expect(m.waiting).toBe(0)
+})
+
+test('o filtro de situação separa a fila humana da conversa com a IA', async () => {
+  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE', customerId: cliente.id })
+  await conversaEsperando()
+
+  expect(await admin.queue({ status: 'BOT' })).toHaveLength(1)
+  expect(await admin.queue({ status: 'WAITING_HUMAN' })).toHaveLength(1)
+  expect(await admin.queue({})).toHaveLength(2)
 })
 
 test('o card mostra o que o cliente disse, não a última fala do bot', async () => {

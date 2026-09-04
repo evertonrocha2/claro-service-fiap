@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Sparkles } from 'lucide-react'
 import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
 import { ticketHref } from '../route.js'
 
@@ -20,7 +20,11 @@ function Card({
   onSelect: () => void
 }) {
   const calor = waitHeat(item.waitingSeconds)
-  const urgente = item.waitingSeconds >= URGENTE_SEGUNDOS
+
+  // Conversa da assistente nao esta esperando uma pessoa, entao nao fica
+  // vermelha por tempo: o cronometro ali mediria a coisa errada.
+  const comAssistente = item.status === 'BOT'
+  const urgente = !comAssistente && item.waitingSeconds >= URGENTE_SEGUNDOS
 
   return (
     /* O cartão guarda dois destinos, e por isso deixou de ser um botão só.
@@ -28,11 +32,13 @@ function Card({
        atendimento inteiro em outra aba, para trabalhar sem perder a fila de
        vista. Um link dentro de um botão seria HTML inválido, então os dois são
        irmãos dentro do cartão. */
-    <article className={`card ${selected ? 'is-selected' : ''}`}>
+    <article
+      className={`card ${selected ? 'is-selected' : ''} ${comAssistente ? 'card--bot' : ''}`}
+    >
       {/* A barra cresce com a espera e vira vermelha ao passar de cinco minutos. */}
       <span
         className={`card__spine ${urgente ? 'card__spine--urgent' : ''}`}
-        style={{ height: `${Math.max(calor * 100, 6)}%` }}
+        style={{ height: `${comAssistente ? 6 : Math.max(calor * 100, 6)}%` }}
         aria-hidden="true"
       />
 
@@ -53,9 +59,16 @@ function Card({
         </div>
 
         <div className="card__meta">
-          <span className={urgente ? 'card__wait--urgent' : undefined}>
-            {formatWait(item.waitingSeconds)}
-          </span>
+          {comAssistente ? (
+            <span className="card__bot">
+              <Sparkles size={12} strokeWidth={2.2} aria-hidden="true" />
+              Com a assistente
+            </span>
+          ) : (
+            <span className={urgente ? 'card__wait--urgent' : undefined}>
+              {formatWait(item.waitingSeconds)}
+            </span>
+          )}
           <span aria-hidden="true">·</span>
           <span>{CHANNEL_LABELS[item.channel]}</span>
           {item.originChannel !== item.channel && (
