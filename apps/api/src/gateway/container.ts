@@ -13,7 +13,11 @@ import {
 } from '../context/index.js'
 import { ConversationOrchestrator } from '../conversation/orchestrator.js'
 import { IdentityService } from '../identity/identity.service.js'
+import { GeminiClassifier } from '../nlp/gemini-classifier.js'
+import { HybridClassifier } from '../nlp/hybrid-classifier.js'
+import { PrismaIntentCacheRepository } from '../nlp/intent-cache.repository.js'
 import { RuleClassifier } from '../nlp/rule-classifier.js'
+import type { IIntentClassifier } from '../nlp/types.js'
 
 export type Container = {
   orchestrator: ConversationOrchestrator
@@ -36,7 +40,7 @@ export function buildContainer(): Container {
       conversations,
       messages,
       customers,
-      new RuleClassifier(),
+      buildClassifier(),
     ),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
@@ -46,6 +50,29 @@ export function buildContainer(): Container {
       tokens,
     },
   }
+}
+
+/**
+ * Regras sempre. Gemini so quando ha chave.
+ *
+ * Sem GEMINI_API_KEY o sistema nao quebra: perde a compreensao de frase torta e
+ * segue resolvendo tudo que uma palavra-chave forte alcanca. Isso mantem a demo
+ * viva quando a cota do tier gratuito acaba ou a internet cai.
+ */
+function buildClassifier(): IIntentClassifier {
+  const rules = new RuleClassifier()
+  const cache = new PrismaIntentCacheRepository(prisma)
+  const apiKey = process.env.GEMINI_API_KEY
+
+  if (!apiKey) {
+    console.warn('GEMINI_API_KEY ausente. Classificando apenas por regras.')
+    return new HybridClassifier({ rules, cache })
+  }
+
+  const options: { apiKey: string; model?: string } = { apiKey }
+  if (process.env.GEMINI_MODEL) options.model = process.env.GEMINI_MODEL
+
+  return new HybridClassifier({ rules, cache, llm: new GeminiClassifier(options) })
 }
 
 /**
