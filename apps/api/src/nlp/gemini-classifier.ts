@@ -10,7 +10,15 @@ export type GeminiOptions = {
   timeoutMs?: number
 }
 
-const MODELO_PADRAO = 'gemini-3-flash-preview'
+/**
+ * Apelido movel em vez de versao fixada.
+ *
+ * O nome fixo anterior, gemini-3-flash-preview, passou a responder 429 por cota
+ * na camada gratuita, e como toda falha aqui e engolida de proposito, o sistema
+ * seguia rodando pelas regras sem ninguem perceber que o modelo estava fora.
+ * O apelido acompanha o modelo atual do Google, e GEMINI_MODEL sobrescreve.
+ */
+const MODELO_PADRAO = 'gemini-flash-latest'
 const TIMEOUT_PADRAO = 8000
 
 const INSTRUCAO = `Você classifica mensagens de clientes de uma operadora de telecomunicações brasileira.

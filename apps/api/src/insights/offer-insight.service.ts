@@ -220,7 +220,7 @@ export class GeminiOfferWriter implements IOfferWriter {
 
   constructor(
     private readonly apiKey: string,
-    private readonly model = 'gemini-3-flash-preview',
+    private readonly model = 'gemini-flash-latest',
     fetchImpl?: typeof fetch,
     private readonly timeoutMs = 8000,
   ) {

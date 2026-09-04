@@ -21,6 +21,7 @@ import { ConversationOrchestrator } from '../conversation/orchestrator.js'
 import { ReadConversationUseCase } from '../conversation/read-conversation.use-case.js'
 import { SetContactUseCase } from '../conversation/set-contact.use-case.js'
 import { IdentityService } from '../identity/identity.service.js'
+import { GeminiCardSummary } from '../insights/card-summary.service.js'
 import { GeminiOfferWriter, OfferInsightService } from '../insights/offer-insight.service.js'
 import { GeminiClassifier } from '../nlp/gemini-classifier.js'
 import { HybridClassifier } from '../nlp/hybrid-classifier.js'
@@ -85,6 +86,7 @@ export function buildContainer(): Container {
       customers,
       buildClassifier(),
       handoff,
+      buildCardSummary(),
     ),
     handoff,
     whatsappDriver,
@@ -110,6 +112,23 @@ export function buildContainer(): Container {
       tokens,
     },
   }
+}
+
+/**
+ * Titulo do cartao: existe so quando ha chave.
+ *
+ * Sem Gemini o construtor devolve undefined, o orquestrador nao chama nada e o
+ * cartao mostra a mensagem crua do cliente. E enfeite util com desligamento
+ * limpo, nao dependencia.
+ */
+function buildCardSummary(): GeminiCardSummary | undefined {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return undefined
+
+  const options: { apiKey: string; model?: string } = { apiKey }
+  if (process.env.GEMINI_MODEL) options.model = process.env.GEMINI_MODEL
+
+  return new GeminiCardSummary(options)
 }
 
 /**

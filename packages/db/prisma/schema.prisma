@@ -144,6 +144,13 @@ model Conversation {
   contactPhone       String?
   assignedAgentId    String?
 
+  /// Titulo do cartao na fila, escrito pela IA a partir do que o cliente disse.
+  ///
+  /// Nao substitui a conversa nem entra nela: e so o resumo que o atendente le
+  /// no quadro. Quando a IA nao esta disponivel o campo fica nulo e o cartao
+  /// volta a mostrar a ultima mensagem crua, que e o comportamento anterior.
+  cardSummary        String?            @db.VarChar(140)
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   firstResponseAt DateTime?

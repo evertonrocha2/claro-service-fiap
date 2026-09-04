@@ -24,6 +24,8 @@ export type QueueItem = {
   serviceLabel: string | null
   waitingSeconds: number
   lastMessage: string | null
+  /** Titulo escrito pela IA. Nulo quando ela nao estava disponivel. */
+  cardSummary: string | null
   assignedAgentName: string | null
 }
 
@@ -150,6 +152,9 @@ export class AdminService {
       serviceLabel: c.service?.label ?? null,
       waitingSeconds: Math.max(0, Math.floor((now.getTime() - c.updatedAt.getTime()) / 1000)),
       lastMessage: ultimoPedido(c.messages),
+      // Campo separado, e nao substituto: a busca do console continua casando
+      // com o texto que o cliente realmente escreveu.
+      cardSummary: c.cardSummary,
       assignedAgentName: c.agent?.name ?? null,
     }))
   }
@@ -190,6 +195,7 @@ export class AdminService {
       serviceLabel: c.service?.label ?? null,
       waitingSeconds: Math.max(0, Math.floor((now.getTime() - c.updatedAt.getTime()) / 1000)),
       lastMessage: mensagens.findLast((m) => m.sender === 'CUSTOMER')?.text ?? null,
+      cardSummary: c.cardSummary,
       assignedAgentName: c.agent?.name ?? null,
       assignedAgentId: c.assignedAgentId,
       messages: mensagens.map((m) => ({

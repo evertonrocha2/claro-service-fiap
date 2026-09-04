@@ -7,6 +7,7 @@ import type {
   IMessageRepository,
 } from '../context/index.js'
 import type { IIdentityService } from '../identity/identity.service.js'
+import type { ICardSummaryWriter } from '../insights/card-summary.service.js'
 import { extractEntities } from '../nlp/pii.js'
 import type { IIntentClassifier } from '../nlp/types.js'
 import {
@@ -17,7 +18,7 @@ import {
   type ReplyContext,
 } from './auto-reply.js'
 import { decide } from './escalation-policy.js'
-import type { HandoffUseCase } from './handoff.use-case.js'
+import { extractHandoffCode, type HandoffUseCase } from './handoff.use-case.js'
 
 export type HandleResult = {
   conversationId: string
@@ -65,7 +66,29 @@ export class ConversationOrchestrator {
     private readonly customers: ICustomerRepository,
     private readonly classifier: IIntentClassifier,
     private readonly handoff?: HandoffUseCase,
+    private readonly cardSummary?: ICardSummaryWriter,
   ) {}
+
+  /**
+   * Reescreve o titulo do cartao na fila, se houver IA disponivel.
+   *
+   * Publico para o teste poder esperar por ele. No caminho normal e chamado sem
+   * espera: o cliente ja recebeu resposta, e o console busca a fila de novo a
+   * cada poucos segundos, entao o titulo aparece um instante depois.
+   *
+   * Nao toca em mensagem nenhuma. O que o cliente le no chat e o que ele
+   * escreveu; isto so muda o que o atendente le no quadro.
+   */
+  async atualizarTituloDoCartao(conversationId: string, texto: string): Promise<void> {
+    if (!this.cardSummary) return
+
+    // O codigo de continuidade e controle, nao pedido: resumi-lo daria um
+    // titulo sobre o proprio mecanismo do link.
+    if (extractHandoffCode(texto)) return
+
+    const titulo = await this.cardSummary.write(texto)
+    if (titulo) await this.conversations.update(conversationId, { cardSummary: titulo })
+  }
 
   /**
    * Marca que esta mensagem apenas atravessou de canal.
@@ -112,6 +135,12 @@ export class ConversationOrchestrator {
       text: msg.text,
       intent: classificacao.intent,
       confidence: classificacao.confidence,
+    })
+
+    // Sem espera de proposito: um titulo bonito no quadro do atendente nao vale
+    // segundos de atraso na resposta ao cliente.
+    void this.atualizarTituloDoCartao(conversa.id, msg.text).catch(() => {
+      // Sem titulo o cartao usa a mensagem crua. Nada a tratar.
     })
 
     const contexto = await this.buildReplyContext(clienteEfetivo)

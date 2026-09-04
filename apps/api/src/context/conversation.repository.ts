@@ -22,6 +22,8 @@ export type UpdateConversationInput = {
   firstResponseAt?: Date
   claimedAt?: Date
   resolvedAt?: Date
+  /** Titulo do cartao escrito pela IA. Nao entra na conversa. */
+  cardSummary?: string
 }
 
 export interface IConversationRepository {

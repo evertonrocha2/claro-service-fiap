@@ -17,6 +17,8 @@ export type QueueItem = {
   serviceLabel: string | null
   waitingSeconds: number
   lastMessage: string | null
+  /** Titulo escrito pela IA. Nulo quando ela nao estava disponivel. */
+  cardSummary: string | null
   assignedAgentName: string | null
 }
 

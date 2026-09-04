@@ -41,9 +41,10 @@ function Card({
   const urgente = !comAssistente && item.waitingSeconds >= URGENTE_SEGUNDOS
   const cruzouCanal = item.originChannel !== item.channel
 
-  // Sem mensagem do cliente o cartão ficaria sem título. Nesse caso o nome
-  // assume o lugar, que é a única coisa que resta para distinguir a linha.
-  const titulo = item.lastMessage ?? item.customerName ?? 'Atendimento sem mensagem'
+  // A IA escreve um título quando está disponível; sem ela vale a mensagem crua,
+  // que é como era antes. Se não houver nem mensagem, o nome assume o lugar.
+  const titulo =
+    item.cardSummary ?? item.lastMessage ?? item.customerName ?? 'Atendimento sem mensagem'
 
   return (
     /* O cartão guarda dois destinos, e por isso deixou de ser um botão só.
