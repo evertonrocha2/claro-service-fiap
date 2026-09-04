@@ -1,5 +1,6 @@
 import { prisma } from '@sync/db'
 import { AdminService } from '../admin/admin.service.js'
+import { AgentPerformanceService } from '../admin/agent-performance.service.js'
 import type { AdminDeps } from '../admin/routes.js'
 import { PrismaAgentRepository } from '../auth/agent.repository.js'
 import { FirstAccessUseCase } from '../auth/first-access.use-case.js'
@@ -40,6 +41,7 @@ export function buildContainer(): Container {
   const customers = new PrismaCustomerRepository(prisma)
   const identity = new IdentityService(customers, conversations)
 
+  const agents = new PrismaAgentRepository(prisma)
   const refreshTokens = new PrismaRefreshTokenRepository(prisma)
   const tokens = new TokenService(requireJwtSecret())
 
@@ -55,13 +57,15 @@ export function buildContainer(): Container {
     setContact: new SetContactUseCase(conversations),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
-      login: new LoginUseCase(customers, refreshTokens, tokens, new PrismaAgentRepository(prisma)),
+      login: new LoginUseCase(customers, refreshTokens, tokens, agents),
       refresh: new RefreshUseCase(refreshTokens, tokens),
       logout: new LogoutUseCase(refreshTokens),
       tokens,
     },
     admin: {
       service: new AdminService(prisma, messages, buildOfferService(messages), customers),
+      performance: new AgentPerformanceService(prisma),
+      agents,
       tokens,
     },
   }

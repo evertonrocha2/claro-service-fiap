@@ -125,7 +125,8 @@ async function main() {
   console.log('capturando:')
   await cdp.shot('1-login')
 
-  await cdp.eval(PREENCHER('input[type=email]', 'bruno@claro.com.br'))
+  const usuario = process.env.SHOT_MANAGER === '1' ? 'leticia@claro.com.br' : 'bruno@claro.com.br'
+  await cdp.eval(PREENCHER('input[type=email]', usuario))
   await cdp.eval(PREENCHER('input[type=password]', 'Atendente123'))
   await cdp.eval(CLICAR('Entrar'))
   await sleep(2500)
@@ -135,19 +136,53 @@ async function main() {
   await sleep(1600)
   await cdp.shot('3-detalhe')
 
-  await cdp.eval(CLICAR('Assumir atendimento'))
-  await sleep(1800)
+  const talvez = async (rotulo, fn) => {
+    try {
+      await fn()
+    } catch (e) {
+      console.log(`  (pulou ${rotulo}: ${e.message})`)
+    }
+  }
+
+  await talvez('assumir', async () => {
+    await cdp.eval(CLICAR('Assumir atendimento'))
+    await sleep(1800)
+  })
   await cdp.shot('4-assumido')
 
-  await cdp.eval(PREENCHER('textarea', 'Oi Maria. Vi que voce quer cancelar o plano movel final 9876. Antes disso, posso ver uma oferta melhor pra voce?'))
-  await sleep(200)
-  await cdp.eval(CLICAR('Enviar'))
-  await sleep(2000)
+  await talvez('responder', async () => {
+    await cdp.eval(
+      PREENCHER(
+        'textarea',
+        'Oi Maria. Vi que voce quer cancelar o plano movel final 9876. Antes disso, posso ver uma oferta melhor pra voce?',
+      ),
+    )
+    await sleep(200)
+    await cdp.eval(CLICAR('Enviar'))
+    await sleep(2000)
+  })
   await cdp.shot('5-respondido')
 
   await cdp.eval(CLICAR('Histórico', '.nav__item'))
   await sleep(1500)
   await cdp.shot('6-historico')
+
+  await cdp.eval(CLICAR('Meus atendimentos', '.nav__item'))
+  await sleep(1800)
+  await cdp.shot('7-meus-atendimentos')
+
+  // Painel pessoal e quadro da equipe: um atendente nao ve o segundo, entao a
+  // captura da equipe entra logada como a gestora.
+  const gestora = process.env.SHOT_MANAGER === '1'
+  if (gestora) {
+    await cdp.eval(CLICAR('Equipe', '.nav__item'))
+    await sleep(1800)
+    await cdp.shot('8-equipe')
+
+    await cdp.eval(`document.querySelector('.team__row').click(); true`)
+    await sleep(1600)
+    await cdp.shot('9-desempenho-do-atendente')
+  }
 
   ws.close()
 }

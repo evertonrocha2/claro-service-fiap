@@ -8,6 +8,8 @@ export type QueueFilters = {
   status?: ConversationStatus
   channel?: Channel
   intent?: Intent
+  /** Responsavel. Quem nao e gestor so consegue pedir o proprio id. */
+  assignedAgentId?: string
 }
 
 export type QueueItem = {
@@ -89,6 +91,7 @@ export class AdminService {
         status: filters.status ? filters.status : { in: PRECISAM_DE_GENTE },
         ...(filters.channel ? { currentChannel: filters.channel } : {}),
         ...(filters.intent ? { intent: filters.intent } : {}),
+        ...(filters.assignedAgentId ? { assignedAgentId: filters.assignedAgentId } : {}),
       },
       include: {
         customer: true,
@@ -172,7 +175,9 @@ export class AdminService {
   async claim(id: string, agentId: string): Promise<Result<{ ok: true }>> {
     const atualizados = await this.db.conversation.updateMany({
       where: { id, status: 'WAITING_HUMAN' },
-      data: { status: 'WITH_HUMAN', assignedAgentId: agentId },
+      // claimedAt e o inicio do trabalho humano. Sem ele o tempo de atendimento
+      // sairia contaminado pela espera na fila, que nao e do atendente.
+      data: { status: 'WITH_HUMAN', assignedAgentId: agentId, claimedAt: new Date() },
     })
 
     if (atualizados.count === 0) {

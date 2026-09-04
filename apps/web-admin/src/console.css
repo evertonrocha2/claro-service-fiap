@@ -1185,3 +1185,219 @@ button {
   font-weight: 500;
   color: var(--muted);
 }
+
+/* ---------- personal and team performance ---------- */
+
+.perf {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
+  padding: 22px;
+}
+
+.perf__head {
+  margin-bottom: 18px;
+}
+
+.perf__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--t-title);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.perf__subtitle {
+  margin: 4px 0 0;
+  font-size: var(--t-body);
+  color: var(--muted);
+}
+
+.perf__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.perf__card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.perf__card-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.perf__card-label {
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.perf__card-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--t-metric);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.perf__card-hint {
+  font-size: var(--t-micro);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.perf__block {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 16px 18px;
+  max-width: 620px;
+}
+
+.perf__block-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 14px;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.perf__empty {
+  margin: 0;
+  font-size: var(--t-body);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.perf__bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Grid de colunas fixas: os rotulos e os numeros alinham entre linhas, e as
+   barras comecam todas no mesmo eixo independentemente do texto ao lado. */
+.perf__bar {
+  display: grid;
+  grid-template-columns: minmax(120px, 168px) 1fr 34px;
+  align-items: center;
+  gap: 12px;
+}
+
+.perf__bar-label {
+  font-size: var(--t-body);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perf__bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.perf__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--claro-red);
+}
+
+.perf__bar-value {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-small);
+  font-weight: 600;
+  text-align: right;
+  color: var(--ink-2);
+}
+
+.team__head,
+.team__row {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.4fr) minmax(110px, 0.8fr) minmax(120px, 0.9fr)
+    minmax(120px, 0.9fr) minmax(80px, 0.6fr) minmax(110px, 0.8fr);
+  gap: 16px;
+  padding: 0 22px;
+  align-items: center;
+}
+
+.team__head {
+  height: var(--row);
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.team__head span {
+  font-size: var(--t-micro);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.team__row {
+  width: 100%;
+  min-height: 54px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+  text-align: left;
+  background: var(--panel);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  font: inherit;
+}
+
+.team__row:hover {
+  background: var(--panel-2);
+}
+
+.team__row[aria-current='true'] {
+  background: var(--claro-tint);
+}
+
+.team__busy {
+  color: var(--claro-deep);
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  .team__head {
+    display: none;
+  }
+
+  .team__row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}

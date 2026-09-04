@@ -1,7 +1,15 @@
 import { AppHeader } from '@sync/chat-ui'
-import { History as HistoryIcon, Inbox } from 'lucide-react'
+import { History as HistoryIcon, Inbox, User, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api, ConsoleError, type ConversationDetail, type Metrics, type QueueItem } from './api.js'
+import {
+  type AgentPerformance,
+  api,
+  ConsoleError,
+  type ConversationDetail,
+  type Me,
+  type Metrics,
+  type QueueItem,
+} from './api.js'
 import { AgentLogin } from './screens/AgentLogin.js'
 import { Board } from './screens/Board.js'
 import { Detail, EmptyDetail } from './screens/Detail.js'
@@ -13,10 +21,11 @@ import {
   filtrosAtivos,
 } from './screens/Filters.js'
 import { History } from './screens/History.js'
+import { Performance, Team } from './screens/Performance.js'
 import { Pulse } from './screens/Pulse.js'
 import { useAgentSession } from './useAgentSession.js'
 
-type Aba = 'fila' | 'historico'
+type Aba = 'fila' | 'historico' | 'meus' | 'equipe'
 
 /**
  * A fila muda porque clientes chegam, não porque este atendente fez algo. Sem
@@ -34,6 +43,11 @@ export function App() {
   const [detalhe, setDetalhe] = useState<ConversationDetail | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [filtros, setFiltros] = useState<FilterState>(FILTRO_VAZIO)
+  const [eu, setEu] = useState<Me | null>(null)
+  const [meus, setMeus] = useState<QueueItem[]>([])
+  const [meuDesempenho, setMeuDesempenho] = useState<AgentPerformance | null>(null)
+  const [equipe, setEquipe] = useState<AgentPerformance[]>([])
+  const [olhando, setOlhando] = useState<AgentPerformance | null>(null)
 
   const token = sessao?.accessToken ?? null
   const aberto = selecionado
@@ -41,15 +55,27 @@ export function App() {
   const carregar = useCallback(async () => {
     if (!token) return
     try {
-      const [ativos, resolvidos, m] = await Promise.all([
+      const [ativos, resolvidos, m, perfil, meusAtivos, desempenho] = await Promise.all([
         api.queue(token),
         api.queue(token, { status: 'RESOLVED' }),
         api.metrics(token),
+        api.me(token),
+        api.queue(token, { assignedTo: 'me', status: 'WITH_HUMAN' }),
+        api.myPerformance(token),
       ])
       setFila(ativos)
       setEncerrados(resolvidos)
       setMetricas(m)
+      setEu(perfil)
+      setMeus(meusAtivos)
+      setMeuDesempenho(desempenho)
       setErro(null)
+
+      // A equipe só é buscada por quem pode vê-la. Pedir e receber 403 a cada
+      // ciclo poluiria o log do servidor e não mudaria nada na tela.
+      if (perfil.canViewTeam) {
+        setEquipe(await api.teamPerformance(token))
+      }
 
       // O detalhe aberto entra no mesmo ciclo: se outro atendente assumir ou
       // encerrar o caso, a tela precisa refletir isso sem depender de clique.
@@ -102,9 +128,21 @@ export function App() {
   function trocarAba(nova: Aba) {
     setAba(nova)
     setFiltros(FILTRO_VAZIO)
+    setOlhando(null)
   }
 
-  const base = aba === 'fila' ? fila : encerrados
+  /** Gestor abre os números de um atendente sem sair da tela da equipe. */
+  async function verAtendente(agentId: string) {
+    if (!token) return
+    try {
+      setOlhando(await api.agentPerformance(token, agentId))
+    } catch {
+      setOlhando(null)
+    }
+  }
+
+  const base = aba === 'fila' ? fila : aba === 'meus' ? meus : encerrados
+  const comLista = aba === 'fila' || aba === 'historico' || aba === 'meus'
   const visiveis = useMemo(() => aplicarFiltros(base, filtros), [base, filtros])
 
   if (!sessao || !token) {
@@ -146,6 +184,16 @@ export function App() {
           <button
             type="button"
             className="nav__item"
+            aria-current={aba === 'meus'}
+            onClick={() => trocarAba('meus')}
+          >
+            <User size={15} strokeWidth={2} />
+            Meus atendimentos
+            <span className="nav__badge">{meus.length}</span>
+          </button>
+          <button
+            type="button"
+            className="nav__item"
             aria-current={aba === 'historico'}
             onClick={() => trocarAba('historico')}
           >
@@ -153,21 +201,45 @@ export function App() {
             Histórico
             <span className="nav__badge">{encerrados.length}</span>
           </button>
+
+          {/* A aba da equipe só existe para quem tem o perfil. Esconder não é
+              a proteção: a API recusa de todo jeito. Isto é só não oferecer
+              porta que não abre. */}
+          {eu?.canViewTeam && (
+            <button
+              type="button"
+              className="nav__item"
+              aria-current={aba === 'equipe'}
+              onClick={() => trocarAba('equipe')}
+            >
+              <Users size={15} strokeWidth={2} />
+              Equipe
+              <span className="nav__badge">{equipe.length}</span>
+            </button>
+          )}
         </nav>
 
-        <Filters
-          value={filtros}
-          onChange={setFiltros}
-          showing={visiveis.length}
-          total={base.length}
-          withStatus={aba === 'fila'}
-        />
+        {comLista && (
+          <Filters
+            value={filtros}
+            onChange={setFiltros}
+            showing={visiveis.length}
+            total={base.length}
+            withStatus={aba === 'fila'}
+          />
+        )}
       </div>
 
       <div className="workarea">
-        {aba === 'fila' ? (
+        {aba === 'fila' && (
           <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
-        ) : (
+        )}
+
+        {aba === 'meus' && (
+          <Board items={visiveis} selectedId={selecionado} onSelect={setSelecionado} />
+        )}
+
+        {aba === 'historico' && (
           <History
             items={visiveis}
             selectedId={selecionado}
@@ -175,6 +247,17 @@ export function App() {
             filtered={filtrosAtivos(filtros)}
           />
         )}
+
+        {aba === 'equipe' &&
+          (olhando ? (
+            <Performance
+              performance={olhando}
+              title={olhando.name}
+              subtitle={olhando.role === 'MANAGER' ? 'Gestão' : 'Atendimento'}
+            />
+          ) : (
+            <Team team={equipe} selectedId={null} onSelect={verAtendente} />
+          ))}
 
         {detalhe ? (
           <Detail

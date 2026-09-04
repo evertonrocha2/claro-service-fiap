@@ -5,6 +5,13 @@ declare global {
   namespace Express {
     interface Request {
       auth?: TokenSubject
+      /**
+       * Papel do atendente, carregado do banco a cada requisicao.
+       *
+       * Nao vem do token de proposito: promover ou rebaixar alguem precisa valer
+       * na hora, e um JWT de 15 minutos carregaria o papel antigo esse tempo todo.
+       */
+      agentRole?: 'AGENT' | 'MANAGER'
     }
   }
 }

@@ -128,6 +128,9 @@ model Conversation {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   firstResponseAt DateTime?
+  /// Quando um atendente assumiu. Sem isto o tempo de atendimento humano nao e
+  /// mensuravel: o que sobra e a jornada inteira, que inclui a espera na fila.
+  claimedAt       DateTime?
   resolvedAt      DateTime?
 
   customer      Customer?      @relation(fields: [customerId], references: [id])

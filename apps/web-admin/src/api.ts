@@ -53,6 +53,28 @@ export type ConversationDetail = QueueItem & {
   }[]
 }
 
+export type AgentRole = 'AGENT' | 'MANAGER'
+
+export type Me = {
+  id: string
+  name: string
+  email: string
+  role: AgentRole
+  canViewTeam: boolean
+}
+
+export type AgentPerformance = {
+  agentId: string
+  name: string
+  role: AgentRole
+  handlingNow: number
+  resolvedToday: number
+  resolvedTotal: number
+  /** Nulo quando ainda nao houve atendimento encerrado com tempo medido. */
+  avgHandlingSeconds: number | null
+  byIntent: { intent: Intent; total: number }[]
+}
+
 export type Metrics = {
   waiting: number
   withAgent: number
@@ -110,13 +132,27 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  queue: (token: string, filtros: { status?: ConversationStatus; intent?: Intent } = {}) => {
+  queue: (
+    token: string,
+    filtros: { status?: ConversationStatus; intent?: Intent; assignedTo?: string } = {},
+  ) => {
     const busca = new URLSearchParams()
     if (filtros.status) busca.set('status', filtros.status)
     if (filtros.intent) busca.set('intent', filtros.intent)
+    if (filtros.assignedTo) busca.set('assignedTo', filtros.assignedTo)
     const query = busca.size > 0 ? `?${busca}` : ''
     return pedir<QueueItem[]>(`/api/admin/conversations${query}`, token)
   },
+
+  me: (token: string) => pedir<Me>('/api/admin/me', token),
+
+  myPerformance: (token: string) => pedir<AgentPerformance>('/api/admin/performance/me', token),
+
+  teamPerformance: (token: string) =>
+    pedir<AgentPerformance[]>('/api/admin/performance/team', token),
+
+  agentPerformance: (token: string, agentId: string) =>
+    pedir<AgentPerformance>(`/api/admin/performance/${agentId}`, token),
 
   metrics: (token: string) => pedir<Metrics>('/api/admin/metrics', token),
 

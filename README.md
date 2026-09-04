@@ -69,7 +69,7 @@ npm run dev:admin    # team console   http://localhost:5174
 ## Checks
 
 ```bash
-npm test         # 230 tests
+npm test         # 251 tests
 npm run typecheck
 npm run lint
 ```
@@ -92,6 +92,7 @@ apps/
     src/conversation/  orchestration, escalation policy, automatic replies
     src/nlp/           rules, Gemini, cache, PII redaction
     src/insights/      offer suggestion from customer profile
+    src/auth/roles.ts  permission table for agent and manager
     src/context/       Prisma repositories
     src/admin/         queue, conversation handling, metrics
   web-site/     customer chat, React 19 + Vite
@@ -131,6 +132,19 @@ without first access all return the same error constant.
 **Refresh tokens rotate with family tracking.** Presenting an already rotated
 token revokes the whole family, including the victim's live token. There is no
 way to tell which of the two parties is legitimate, so both go.
+
+**Roles are a permission table, not scattered checks.** Two roles exist, agent
+and manager, and what each can do is declared as data in one place. A scattered
+`if (role === ...)` means every forgotten place is a hole. The role is read from
+the database on every request rather than from the token: demoting somebody has
+to take effect at once, and a fifteen minute JWT would carry the old role that
+whole time.
+
+**Agents see their own numbers, managers see the team.** An agent cannot read a
+colleague's queue by changing a query parameter, and cannot read their numbers by
+changing a path segment. Both are covered by tests. Handling time is measured
+from the moment an agent claims a conversation, not from when it was created,
+because the queue wait is not their responsibility.
 
 **The console board is organised by intent, not by workflow stage.** Columns run
 in order of the cost of ignoring them, so cancellation sits leftmost and reading
