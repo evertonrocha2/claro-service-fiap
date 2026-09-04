@@ -1,0 +1,942 @@
+<title>Arquitetura do Sync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  :root {
+    --ground: #f7f6f3;
+    --surface: #ffffff;
+    --sunk: #efeeea;
+    --ink: #17181c;
+    --ink-2: #3d4048;
+    --muted: #6c6f76;
+    --rule: #dcdad4;
+    --rule-strong: #bfbcb3;
+    --accent: #cf1327;
+    --accent-soft: #fbeceb;
+    --ok: #1f6b45;
+    --ok-soft: #e7f2ec;
+
+    --sans: 'Archivo', system-ui, -apple-system, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+    color-scheme: light;
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ground: #15161a;
+      --surface: #1c1e23;
+      --sunk: #212429;
+      --ink: #eceae6;
+      --ink-2: #c3c1bc;
+      --muted: #97938c;
+      --rule: #2e3138;
+      --rule-strong: #454951;
+      --accent: #ff6068;
+      --accent-soft: #2c1c1e;
+      --ok: #6ec79b;
+      --ok-soft: #17261e;
+
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #15161a;
+    --surface: #1c1e23;
+    --sunk: #212429;
+    --ink: #eceae6;
+    --ink-2: #c3c1bc;
+    --muted: #97938c;
+    --rule: #2e3138;
+    --rule-strong: #454951;
+    --accent: #ff6068;
+    --accent-soft: #2c1c1e;
+    --ok: #6ec79b;
+    --ok-soft: #17261e;
+
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  /* ---------- capa ---------- */
+
+  .top { padding-bottom: 22px; border-bottom: 2px solid var(--ink); }
+
+  .eyebrow {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(30px, 6vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  .lede {
+    max-width: 62ch;
+    margin: 20px 0 0;
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    color: var(--ink-2);
+  }
+
+  .facts {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+
+  .facts div { display: flex; flex-direction: column; gap: 1px; }
+
+  .facts dt {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .facts dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  /* ---------- seções ---------- */
+
+  h2 {
+    margin: 52px 0 0;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--rule-strong);
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    margin: 30px 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  p {
+    max-width: 68ch;
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1.68;
+    color: var(--ink-2);
+  }
+
+  h2 + p { margin-top: 18px; }
+
+  p strong { color: var(--ink); font-weight: 600; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--sunk);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  /* ---------- figuras ---------- */
+
+  figure {
+    margin: 26px 0 0;
+    padding: 20px 18px 14px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+  }
+
+  figure svg { display: block; width: 100%; height: auto; color: var(--ink); }
+
+  figcaption {
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid var(--rule);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .dia-box { fill: var(--surface); stroke: var(--rule-strong); }
+  .dia-sunk { fill: var(--sunk); stroke: var(--rule); }
+  .dia-hot { fill: var(--accent-soft); stroke: var(--accent); }
+  .dia-ok { fill: var(--ok-soft); stroke: var(--ok); }
+
+  .dia-t {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--ink);
+  }
+
+  .dia-s {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    fill: var(--muted);
+  }
+
+  .dia-m {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    fill: var(--muted);
+  }
+
+  .dia-hot-t { fill: var(--accent); }
+  .dia-line { stroke: var(--rule-strong); fill: none; }
+  .dia-flow { stroke: var(--ink); fill: none; stroke-width: 1.3; }
+  .dia-accent { stroke: var(--accent); fill: none; stroke-width: 1.6; }
+
+  /* ---------- tabelas ---------- */
+
+  .scroll-x { overflow-x: auto; margin-top: 22px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  th {
+    text-align: left;
+    padding: 0 14px 8px 0;
+    border-bottom: 1px solid var(--rule-strong);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 14px 10px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  td:first-child { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+  td code, th code { white-space: nowrap; }
+
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- listas de módulo ---------- */
+
+  .mods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+    gap: 0;
+    margin-top: 22px;
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .mods > div {
+    padding: 13px 16px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .mods b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .mods span {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+
+  /* ---------- etiqueta hoje / produção ---------- */
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 7px;
+    vertical-align: 1px;
+  }
+
+  .tag--hoje { background: var(--accent-soft); color: var(--accent); }
+  .tag--prod { background: var(--ok-soft); color: var(--ok); }
+
+  @media (max-width: 620px) {
+    .mods > div { border-right: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  /* ---------- impressao ----------
+     O documento vai anexado ao video da entrega, entao precisa sair em PDF sem
+     figura cortada ao meio e sem titulo orfao no pe da pagina. */
+  @media print {
+    :root {
+      --ground: #ffffff;
+      --surface: #ffffff;
+      --sunk: #f2f1ee;
+    }
+
+    body { background: #ffffff; }
+
+    .page { max-width: none; padding: 0; }
+
+    figure,
+    table,
+    .mods {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    figure { margin-top: 16px; padding: 14px 14px 10px; }
+    figcaption { margin-top: 10px; padding-top: 9px; font-size: 11.5px; }
+
+    p { font-size: 15px; line-height: 1.6; }
+    .lede { font-size: 16px; }
+    .mods { margin-top: 16px; }
+    .scroll-x { margin-top: 16px; overflow-x: visible; }
+    h3 { margin-top: 22px; }
+
+    tr { break-inside: avoid; page-break-inside: avoid; }
+
+    h2 {
+      break-after: avoid;
+      page-break-after: avoid;
+      margin-top: 34px;
+    }
+
+    h2 + p,
+    h3 { break-after: avoid; page-break-after: avoid; }
+
+    h3 { break-before: auto; }
+
+    /* A capa ocupa a primeira pagina inteira.
+       Deixada no fluxo, a figura do panorama nao cabia embaixo dela e ia para a
+       pagina seguinte, abandonando meia pagina em branco no meio de um
+       paragrafo. Como capa, o mesmo espaco lê como decisao. */
+    .top {
+      break-after: page;
+      page-break-after: always;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    h2:first-of-type { margin-top: 0; }
+
+    figcaption { color: #555; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <p class="eyebrow">Challenge Sprint 3 &middot; Claro &middot; Sync Unit &middot; 4SI</p>
+    <h1>Arquitetura do Sync</h1>
+
+    <p class="lede">
+      O Sync é a camada de integração que faz o contexto do atendimento viajar junto com o cliente.
+      A conversa começa no site, continua no WhatsApp ou com um atendente, e ninguém repete nada.
+      Este documento descreve o que foi construído, como as peças se ligam e o que está simulado.
+    </p>
+
+    <dl class="facts">
+      <div><dt>Processos</dt><dd>1 API + 3 fronts</dd></div>
+      <div><dt>Módulos</dt><dd>9</dd></div>
+      <div><dt>Tabelas</dt><dd>11</dd></div>
+      <div><dt>Testes</dt><dd>321</dd></div>
+    </dl>
+  </header>
+
+  <h2>Panorama</h2>
+
+  <p>
+    Um <strong>monolito modular</strong>: um único processo Node, com cada caixa do diagrama isolada
+    atrás da própria interface TypeScript. A escolha é deliberada. Microsserviços dariam ao projeto
+    a complexidade de operação de um sistema grande sem nenhum dos problemas que a justificam, e
+    separar um módulo em serviço depois é mecânico, porque a fronteira já existe no tipo.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 860 430" role="img" aria-label="Três telas de cliente e o console falam com uma única API por HTTP e JSON; a API guarda tudo num MySQL e conversa com o Gemini e com a API da Meta, ambos opcionais.">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor" />
+        </marker>
+      </defs>
+
+      <!-- fronts -->
+      <text class="dia-s" x="0" y="12">CLIENTE</text>
+      <rect class="dia-box" x="0" y="22" width="150" height="50" rx="4" />
+      <text class="dia-t" x="14" y="43">Site</text>
+      <text class="dia-m" x="14" y="59">React 19 · :5173</text>
+
+      <rect class="dia-box" x="166" y="22" width="150" height="50" rx="4" />
+      <text class="dia-t" x="180" y="43">WhatsApp</text>
+      <text class="dia-m" x="180" y="59">simulado · :5175</text>
+
+      <text class="dia-s" x="530" y="12">EQUIPE CLARO</text>
+      <rect class="dia-box" x="530" y="22" width="180" height="50" rx="4" />
+      <text class="dia-t" x="544" y="43">Console</text>
+      <text class="dia-m" x="544" y="59">atendente e gestão · :5174</text>
+
+      <!-- setas fronts -> api -->
+      <path class="dia-flow" d="M75 72 L75 108" marker-end="url(#a1)" />
+      <path class="dia-flow" d="M241 72 L241 108" marker-end="url(#a1)" />
+      <path class="dia-flow" d="M620 72 L620 108" marker-end="url(#a1)" />
+      <text class="dia-m" x="86" y="94">HTTP · JSON</text>
+      <text class="dia-m" x="631" y="94">HTTP · JSON · JWT</text>
+
+      <!-- api -->
+      <rect class="dia-box" x="0" y="110" width="710" height="182" rx="5" />
+      <text class="dia-t" x="16" y="132">API Sync</text>
+      <text class="dia-m" x="86" y="132">Node · Express 5 · TypeScript · um processo</text>
+
+      <rect class="dia-sunk" x="16" y="146" width="150" height="44" rx="3" />
+      <text class="dia-t" x="28" y="167">channels</text>
+      <text class="dia-m" x="28" y="181">normaliza a entrada</text>
+
+      <rect class="dia-sunk" x="178" y="146" width="150" height="44" rx="3" />
+      <text class="dia-t" x="190" y="167">identity</text>
+      <text class="dia-m" x="190" y="181">quem é o cliente</text>
+
+      <rect class="dia-sunk" x="340" y="146" width="150" height="44" rx="3" />
+      <text class="dia-t" x="352" y="167">nlp</text>
+      <text class="dia-m" x="352" y="181">intenção da mensagem</text>
+
+      <rect class="dia-sunk" x="502" y="146" width="192" height="44" rx="3" />
+      <text class="dia-t" x="514" y="167">conversation</text>
+      <text class="dia-m" x="514" y="181">orquestra, escala, migra canal</text>
+
+      <rect class="dia-sunk" x="16" y="200" width="150" height="44" rx="3" />
+      <text class="dia-t" x="28" y="221">auth</text>
+      <text class="dia-m" x="28" y="235">login, sessão, papéis</text>
+
+      <rect class="dia-sunk" x="178" y="200" width="150" height="44" rx="3" />
+      <text class="dia-t" x="190" y="221">admin</text>
+      <text class="dia-m" x="190" y="235">fila e indicadores</text>
+
+      <rect class="dia-sunk" x="340" y="200" width="150" height="44" rx="3" />
+      <text class="dia-t" x="352" y="221">insights</text>
+      <text class="dia-m" x="352" y="235">oferta e título</text>
+
+      <rect class="dia-sunk" x="502" y="200" width="192" height="44" rx="3" />
+      <text class="dia-t" x="514" y="221">context</text>
+      <text class="dia-m" x="514" y="235">repositórios Prisma</text>
+
+      <text class="dia-m" x="16" y="272">gateway: rotas, validação Zod e a raiz de composição</text>
+
+      <!-- banco -->
+      <path class="dia-flow" d="M355 292 L355 328" marker-end="url(#a1)" />
+      <text class="dia-m" x="366" y="314">SQL</text>
+      <rect class="dia-box" x="205" y="330" width="300" height="48" rx="4" />
+      <text class="dia-t" x="221" y="350">MySQL 8</text>
+      <text class="dia-m" x="221" y="366">11 tabelas · Docker · Prisma</text>
+
+      <!-- externos -->
+      <text class="dia-s" x="742" y="12">FORA</text>
+
+      <rect class="dia-box" x="742" y="146" width="118" height="44" rx="4" stroke-dasharray="4 3" />
+      <text class="dia-t" x="754" y="167">Gemini</text>
+      <text class="dia-m" x="754" y="181">opcional</text>
+      <path class="dia-line" d="M694 168 L742 168" stroke-dasharray="4 3" marker-end="url(#a1)" />
+
+      <rect class="dia-box" x="742" y="200" width="118" height="44" rx="4" stroke-dasharray="4 3" />
+      <text class="dia-t" x="754" y="221">Meta</text>
+      <text class="dia-m" x="754" y="235">modo meta</text>
+      <path class="dia-line" d="M694 222 L742 222" stroke-dasharray="4 3" marker-end="url(#a1)" />
+
+      <text class="dia-m" x="860" y="266" text-anchor="end">tracejado = pode faltar</text>
+      <text class="dia-m" x="860" y="280" text-anchor="end">sem derrubar o sistema</text>
+    </svg>
+
+    <figcaption>
+      Três portas de cliente e uma porta de equipe, todas contra a mesma API. Os dois serviços
+      externos estão tracejados porque o sistema funciona sem eles: sem Gemini a classificação cai
+      nas regras, e sem a Meta o WhatsApp é a tela simulada.
+    </figcaption>
+  </figure>
+
+  <div class="mods">
+    <div><b>channels</b><span>Camada Sync. Traduz site, app e WhatsApp para um único formato de mensagem.</span></div>
+    <div><b>identity</b><span>Resolve o cliente por login, CPF, telefone ou protocolo.</span></div>
+    <div><b>nlp</b><span>Regras, cache e Gemini. Remove dados pessoais antes de qualquer chamada externa.</span></div>
+    <div><b>conversation</b><span>Orquestrador, política de escalonamento, respostas automáticas e handoff.</span></div>
+    <div><b>auth</b><span>Login de cliente e de atendente, Argon2id, JWT, rotação de refresh, papéis.</span></div>
+    <div><b>admin</b><span>Fila por intenção, atendimento, métricas e desempenho por pessoa.</span></div>
+    <div><b>insights</b><span>Sugestão de oferta e título do cartão, ambos escritos pela IA.</span></div>
+    <div><b>context</b><span>Repositórios Prisma. É o único lugar que conhece o banco.</span></div>
+    <div><b>gateway</b><span>Rotas Express, validação Zod e a raiz de composição do sistema.</span></div>
+  </div>
+
+  <h2>O caminho de uma mensagem</h2>
+
+  <p>
+    Toda mensagem entra pelo mesmo pipeline, venha do site ou do WhatsApp. A ordem importa: a
+    identificação vem antes da classificação porque o contexto muda a resposta, e a persistência da
+    mensagem vem depois da classificação para a linha nascer já com intenção e confiança.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 860 330" role="img" aria-label="A mensagem passa por normalização, identificação, carga da conversa, classificação, política e resposta, e a classificação tenta regras, depois cache, e só então o Gemini.">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor" />
+        </marker>
+      </defs>
+
+      <text class="dia-m" x="0" y="34">mensagem</text>
+      <path class="dia-flow" d="M58 30 L84 30" marker-end="url(#a2)" />
+
+      <rect class="dia-box" x="86" y="12" width="122" height="38" rx="4" />
+      <text class="dia-t" x="98" y="30">normaliza</text>
+      <text class="dia-m" x="98" y="43">canal → 1 formato</text>
+
+      <path class="dia-flow" d="M208 31 L236 31" marker-end="url(#a2)" />
+      <rect class="dia-box" x="238" y="12" width="122" height="38" rx="4" />
+      <text class="dia-t" x="250" y="30">identifica</text>
+      <text class="dia-m" x="250" y="43">CPF · telefone · login</text>
+
+      <path class="dia-flow" d="M360 31 L388 31" marker-end="url(#a2)" />
+      <rect class="dia-box" x="390" y="12" width="122" height="38" rx="4" />
+      <text class="dia-t" x="402" y="30">carrega</text>
+      <text class="dia-m" x="402" y="43">conversa aberta</text>
+
+      <path class="dia-flow" d="M512 31 L540 31" marker-end="url(#a2)" />
+      <rect class="dia-hot" x="542" y="12" width="122" height="38" rx="4" />
+      <text class="dia-t dia-hot-t" x="554" y="30">classifica</text>
+      <text class="dia-m" x="554" y="43">intenção + confiança</text>
+
+      <path class="dia-flow" d="M664 31 L692 31" marker-end="url(#a2)" />
+      <rect class="dia-box" x="694" y="12" width="122" height="38" rx="4" />
+      <text class="dia-t" x="706" y="30">decide</text>
+      <text class="dia-m" x="706" y="43">responde ou escala</text>
+
+      <!-- cascata da classificacao -->
+      <path class="dia-accent" d="M603 50 L603 92" marker-end="url(#a2)" />
+
+      <rect class="dia-box" x="86" y="94" width="730" height="96" rx="5" stroke-dasharray="4 3" />
+      <text class="dia-s" x="100" y="112">DENTRO DE CLASSIFICA</text>
+
+      <rect class="dia-sunk" x="100" y="122" width="176" height="52" rx="3" />
+      <text class="dia-t" x="112" y="142">1 · regras</text>
+      <text class="dia-m" x="112" y="156">palavras-chave com peso</text>
+      <text class="dia-m" x="112" y="168">aceita se ≥ 0.80</text>
+
+      <path class="dia-flow" d="M276 148 L306 148" marker-end="url(#a2)" />
+      <text class="dia-m" x="278" y="140">não</text>
+
+      <rect class="dia-sunk" x="308" y="122" width="176" height="52" rx="3" />
+      <text class="dia-t" x="320" y="142">2 · cache</text>
+      <text class="dia-m" x="320" y="156">SHA-256 do texto</text>
+      <text class="dia-m" x="320" y="168">já redigido</text>
+
+      <path class="dia-flow" d="M484 148 L514 148" marker-end="url(#a2)" />
+      <text class="dia-m" x="486" y="140">não</text>
+
+      <rect class="dia-hot" x="516" y="122" width="176" height="52" rx="3" />
+      <text class="dia-t dia-hot-t" x="528" y="142">3 · Gemini</text>
+      <text class="dia-m" x="528" y="156">só o que sobrou</text>
+      <text class="dia-m" x="528" y="168">sem CPF, sem telefone</text>
+
+      <text class="dia-m" x="804" y="142" text-anchor="end">falhou?</text>
+      <text class="dia-m" x="804" y="156" text-anchor="end">volta às regras</text>
+      <text class="dia-m" x="804" y="168" text-anchor="end">e responde igual</text>
+
+      <!-- saidas -->
+      <path class="dia-flow" d="M755 50 L755 214" marker-end="url(#a2)" />
+
+      <rect class="dia-box" x="86" y="216" width="200" height="44" rx="4" />
+      <text class="dia-t" x="98" y="236">resposta automática</text>
+      <text class="dia-m" x="98" y="250">status permanece BOT</text>
+
+      <rect class="dia-hot" x="302" y="216" width="200" height="44" rx="4" />
+      <text class="dia-t dia-hot-t" x="314" y="236">escala para pessoa</text>
+      <text class="dia-m" x="314" y="250">status vira WAITING_HUMAN</text>
+
+      <rect class="dia-box" x="518" y="216" width="200" height="44" rx="4" />
+      <text class="dia-t" x="530" y="236">silêncio</text>
+      <text class="dia-m" x="530" y="250">o atendente já conduz</text>
+
+      <path class="dia-line" d="M755 238 L722 238" marker-end="url(#a2)" />
+      <path class="dia-line" d="M186 260 L186 286" marker-end="url(#a2)" />
+      <path class="dia-line" d="M402 260 L402 286" marker-end="url(#a2)" />
+      <path class="dia-line" d="M618 260 L618 286" marker-end="url(#a2)" />
+
+      <rect class="dia-sunk" x="86" y="288" width="632" height="34" rx="4" />
+      <text class="dia-t" x="98" y="309">grava a mensagem, atualiza o contexto e devolve pelo canal de origem</text>
+    </svg>
+
+    <figcaption>
+      A cascata de classificação é o que mantém a demonstração de pé: as regras resolvem a maioria
+      sozinhas, o cache evita pagar duas vezes pela mesma frase, e o modelo entra apenas no que
+      sobrou. Se ele falhar ou a cota acabar, o sistema continua respondendo pelas regras.
+    </figcaption>
+  </figure>
+
+  <h2>Continuidade entre canais</h2>
+
+  <p>
+    Este é o ponto do produto, e é onde a arquitetura foi mais deliberada. O cliente muda de canal;
+    <strong>o atendente não muda de ferramenta</strong>. Ele continua dentro do Sync, que mostra o
+    site e o WhatsApp na mesma conversa. É o modelo de caixa de entrada unificada, o mesmo que
+    ferramentas como o ManyChat usam sobre a API oficial da Meta.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 860 340" role="img" aria-label="O cliente sai do site para o WhatsApp levando um código de uso único; as duas telas apontam para a mesma conversa no banco, e o atendente responde do console sem trocar de ferramenta.">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor" />
+        </marker>
+        <marker id="a3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="var(--accent)" />
+        </marker>
+      </defs>
+
+      <text class="dia-s" x="0" y="14">CLIENTE</text>
+
+      <rect class="dia-box" x="0" y="24" width="186" height="56" rx="4" />
+      <text class="dia-t" x="14" y="46">Conversa no site</text>
+      <text class="dia-m" x="14" y="62">contexto, intenção, protocolo</text>
+
+      <path class="dia-accent" d="M186 52 L292 52" marker-end="url(#a3r)" />
+      <rect class="dia-hot" x="294" y="30" width="176" height="44" rx="4" />
+      <text class="dia-t dia-hot-t" x="306" y="49">SYNC-XXXXXXXXXXXXXXXX</text>
+      <text class="dia-m" x="306" y="63">uso único · 15 min · 79 bits</text>
+
+      <path class="dia-accent" d="M470 52 L576 52" marker-end="url(#a3r)" />
+      <rect class="dia-box" x="578" y="24" width="186" height="56" rx="4" />
+      <text class="dia-t" x="592" y="46">Conversa no WhatsApp</text>
+      <text class="dia-m" x="592" y="62">continua do mesmo ponto</text>
+
+      <!-- ambos apontam para a mesma conversa -->
+      <path class="dia-line" d="M93 80 L93 130 L360 130" marker-end="url(#a3)" />
+      <path class="dia-line" d="M671 80 L671 130 L500 130" marker-end="url(#a3)" />
+
+      <rect class="dia-hot" x="362" y="112" width="136" height="38" rx="4" />
+      <text class="dia-t dia-hot-t" x="374" y="130">uma conversa</text>
+      <text class="dia-m" x="374" y="143">mesmo protocolo</text>
+
+      <path class="dia-flow" d="M430 150 L430 182" marker-end="url(#a3)" />
+
+      <rect class="dia-box" x="222" y="184" width="416" height="52" rx="4" />
+      <text class="dia-t" x="236" y="205">Console do atendente</text>
+      <text class="dia-m" x="236" y="221">vê os dois canais na mesma conversa e responde de um lugar só</text>
+
+      <path class="dia-line" d="M300 236 L300 268 L93 268 L93 84" marker-end="url(#a3)" />
+      <path class="dia-line" d="M560 236 L560 268 L671 268 L671 84" marker-end="url(#a3)" />
+      <text class="dia-m" x="196" y="262">resposta sai no canal atual</text>
+
+      <text class="dia-s" x="0" y="300">O QUE NÃO ACONTECE</text>
+      <text class="dia-m" x="0" y="318">o atendente abrir o WhatsApp · o histórico do site aparecer na tela do cliente no WhatsApp</text>
+    </svg>
+
+    <figcaption>
+      O código é a amarra entre as duas conversas, e é uma credencial: uso único, quinze minutos e
+      cerca de 79 bits de entropia. Cada tela do cliente mostra só o que passou por ela; o console
+      é o único lugar que vê as duas pontas.
+    </figcaption>
+  </figure>
+
+  <h2>Quem fala com o cliente</h2>
+
+  <p>
+    A conversa tem quatro estados, e eles decidem quem responde. A regra que governa tudo é simples:
+    <strong>assumido pelo atendente, a assistente para de responder</strong>, nos dois canais. Duas
+    vozes na mesma conversa se contradizem.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 860 200" role="img" aria-label="Estados da conversa: BOT, aguardando pessoa, com pessoa e resolvido; o atendente pode assumir tanto de BOT quanto de aguardando, e a partir de com pessoa a assistente fica em silêncio.">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0,0 10,5 0,10" fill="currentColor" />
+        </marker>
+      </defs>
+
+      <rect class="dia-ok" x="0" y="40" width="164" height="50" rx="4" />
+      <text class="dia-t" x="14" y="61">BOT</text>
+      <text class="dia-m" x="14" y="76">a assistente responde</text>
+
+      <path class="dia-flow" d="M164 65 L228 65" marker-end="url(#a4)" />
+      <text class="dia-m" x="168" y="57">escalou</text>
+
+      <rect class="dia-box" x="230" y="40" width="164" height="50" rx="4" />
+      <text class="dia-t" x="244" y="61">WAITING_HUMAN</text>
+      <text class="dia-m" x="244" y="76">na fila, ninguém escreve</text>
+
+      <path class="dia-flow" d="M394 65 L458 65" marker-end="url(#a4)" />
+      <text class="dia-m" x="398" y="57">assumiu</text>
+
+      <rect class="dia-hot" x="460" y="40" width="164" height="50" rx="4" />
+      <text class="dia-t dia-hot-t" x="474" y="61">WITH_HUMAN</text>
+      <text class="dia-m" x="474" y="76">só o atendente escreve</text>
+
+      <path class="dia-flow" d="M624 65 L688 65" marker-end="url(#a4)" />
+      <text class="dia-m" x="628" y="57">encerrou</text>
+
+      <rect class="dia-box" x="690" y="40" width="164" height="50" rx="4" />
+      <text class="dia-t" x="704" y="61">RESOLVED</text>
+      <text class="dia-m" x="704" y="76">vai para o histórico</text>
+
+      <!-- atalho: assumir direto de BOT -->
+      <path class="dia-accent" d="M82 40 L82 14 L542 14 L542 38" marker-end="url(#a4)" />
+      <text class="dia-m dia-hot-t" x="252" y="9">o atendente assume quando quiser, sem esperar a assistente escalar</text>
+
+      <!-- faixa do silencio -->
+      <path class="dia-line" d="M230 108 L854 108" stroke-dasharray="4 3" />
+      <path class="dia-line" d="M230 102 L230 114" />
+      <path class="dia-line" d="M854 102 L854 114" />
+      <text class="dia-m" x="230" y="128">daqui em diante a assistente registra a mensagem do cliente e não escreve nada</text>
+
+      <text class="dia-s" x="0" y="164">ESCALA POR QUATRO MOTIVOS</text>
+      <text class="dia-m" x="0" y="182">cancelamento · pedido explícito de atendente · confiança abaixo de 0.60 · duas mensagens seguidas sem entender</text>
+    </svg>
+
+    <figcaption>
+      O atalho vermelho é o que faltava até pouco tempo atrás: o atendente só conseguia entrar
+      depois que a própria assistente decidia escalar. Agora ele assume quando quiser, e a partir
+      dali a assistente fica em silêncio nos dois canais.
+    </figcaption>
+  </figure>
+
+  <h2>Funcionalidades</h2>
+
+  <h3>Para o cliente</h3>
+
+  <p>
+    O acesso tem três caminhos: entrar, primeiro acesso e recuperação de senha. Não existe cadastro
+    aberto, porque uma conta criada do zero não teria plano nem fatura sobre o que conversar. Quem já
+    é cliente prova quem é confirmando CPF e e-mail, e define a senha.
+  </p>
+
+  <p>
+    No chat, uma faixa no topo mostra <strong>o que o Sync já sabe</strong>: quem é a pessoa, o canal,
+    o assunto, o serviço e o protocolo, marcando com um visto conforme identifica. Isso é também
+    transparência sob a LGPD, porque a pessoa vê exatamente qual dado dela a conversa guarda. O
+    telefone é pedido depois da primeira troca, e não na entrada, para o atendimento não virar
+    cadastro. É esse número que liga o site ao WhatsApp quando não há login.
+  </p>
+
+  <h3>Para o atendente</h3>
+
+  <p>
+    A fila não é uma tabela com filtro: cada coluna é a intenção pela qual a pessoa procurou a Claro,
+    em ordem de custo de ignorar. O título de cada cartão é escrito pela IA a partir do que o cliente
+    disse; sem IA disponível, o cartão mostra a mensagem crua. Cada atendimento tem endereço próprio
+    e abre em outra aba, com a fila continuando atualizada atrás.
+  </p>
+
+  <p>
+    Ao lado da conversa, o Sync sugere <strong>o que faria sentido oferecer àquele cliente</strong>,
+    com a justificativa e o grau de confiança. A sugestão nasce de regras sobre o perfil, e o modelo
+    escreve o texto quando está disponível. Quando há problema técnico aberto, ela diz para resolver
+    a falha antes de oferecer qualquer coisa.
+  </p>
+
+  <h3>Para a gestão</h3>
+
+  <p>
+    O menu muda com o papel. Em vez de "meu painel", a gestão vê a equipe inteira e entra no painel de
+    cada pessoa. As permissões são uma <strong>tabela de dados no servidor</strong>, não uma condição
+    espalhada pela interface, e o papel é lido do banco a cada requisição, nunca do token, para que
+    promover ou rebaixar alguém valha na hora.
+  </p>
+
+  <h2>Segurança e dados pessoais</h2>
+
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th scope="col">Decisão</th><th scope="col">Como</th><th scope="col">Por quê</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Senhas</td>
+          <td>Argon2id, salt por senha embutido no hash</td>
+          <td>Recomendação do OWASP. Vazar o banco não entrega senhas.</td>
+        </tr>
+        <tr>
+          <td>Sessão</td>
+          <td>JWT de 15 minutos e refresh opaco que gira a cada uso</td>
+          <td>O refresh precisa ser revogável, e um JWT autocontido não seria.</td>
+        </tr>
+        <tr>
+          <td>Roubo de sessão</td>
+          <td>Detecção de reuso: usar um refresh já gasto revoga a família inteira</td>
+          <td>É o sinal de que o token foi copiado.</td>
+        </tr>
+        <tr>
+          <td>Dados pessoais na IA</td>
+          <td>CPF, telefone e e-mail viram marcadores antes de qualquer chamada</td>
+          <td>As entidades reais são extraídas aqui por regex. Nada disso chega ao Google.</td>
+        </tr>
+        <tr>
+          <td>CPF na tela</td>
+          <td>Mascarado para o atendente: <code class="num">***.456.789-**</code></td>
+          <td>Atender não exige ver o documento inteiro.</td>
+        </tr>
+        <tr>
+          <td>Código de continuidade</td>
+          <td>16 caracteres, uso único, 15 minutos, 30 tentativas por minuto na porta</td>
+          <td>É uma credencial: quem acertar um entra na conversa de outra pessoa.</td>
+        </tr>
+        <tr>
+          <td>Conversa alheia</td>
+          <td>Cliente autenticado só alcança a própria conversa</td>
+          <td>Antes, um login qualquer mais o id abria a conversa de outro cliente.</td>
+        </tr>
+        <tr>
+          <td>Telefone digitado</td>
+          <td>Não concede identidade nenhuma, só reencontra a conversa</td>
+          <td>Telefone não é segredo. Digitar o número de outro não pode revelar a fatura dele.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Dados</h2>
+
+  <p>
+    Onze tabelas em MySQL 8, acessadas só pelos repositórios do módulo <code>context</code>. O
+    atendimento é a <code>Conversation</code>: ela carrega o protocolo, o canal de origem, o canal
+    atual, a intenção, o estado e o telefone de contato, que é a chave que atravessa os canais.
+  </p>
+
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th scope="col">Tabela</th><th scope="col">Guarda</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Conversation</code></td><td>O atendimento: protocolo, canais, intenção, estado, responsável, telefone de contato e o título escrito pela IA.</td></tr>
+        <tr><td><code>Message</code></td><td>Cada fala, com o canal em que aconteceu. É esse campo que permite a cada tela do cliente mostrar só o que passou por ela.</td></tr>
+        <tr><td><code>Customer</code></td><td>Cliente da Claro: CPF, nome, e-mail, telefone e o hash da senha.</td></tr>
+        <tr><td><code>Service</code> e <code>Invoice</code></td><td>Plano e fatura. Alimentam a resposta automática e a sugestão de oferta.</td></tr>
+        <tr><td><code>Agent</code></td><td>A equipe, com o papel de atendimento ou gestão.</td></tr>
+        <tr><td><code>HandoffToken</code></td><td>O código de continuidade, com validade e marca de uso.</td></tr>
+        <tr><td><code>RefreshToken</code></td><td>Só o hash, com família e marca de uso, para detectar reuso.</td></tr>
+        <tr><td><code>PasswordResetToken</code></td><td>Recuperação de senha. Também só o hash.</td></tr>
+        <tr><td><code>IntentCache</code></td><td>Classificação já feita, indexada pelo hash do texto redigido.</td></tr>
+        <tr><td><code>OfferInsight</code></td><td>A sugestão de oferta, com origem e confiança.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>O que é real e o que entraria no lugar</h2>
+
+  <p>
+    Back-end e front-end rodam de verdade contra um MySQL real. Três coisas estão simuladas, e cada
+    uma tem um ponto de troca explícito no código, não uma reescrita.
+  </p>
+
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Peça</th>
+          <th scope="col"><span class="tag tag--hoje">hoje</span>Como está</th>
+          <th scope="col"><span class="tag tag--prod">prod</span>Em produção</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>WhatsApp</td>
+          <td>Driver <code>mock</code>: uma tela React que fala com a mesma API, informando canal e telefone. A porta dela existe só neste modo.</td>
+          <td>Driver <code>meta</code>: Cloud API, número dedicado no Meta Business Suite e webhook assinado, respeitando a janela de 24 horas e os templates. O back-end não sabe a diferença.</td>
+        </tr>
+        <tr>
+          <td>E-mail e SMS</td>
+          <td>Não há remetente. O código de recuperação aparece na tela, marcado como demonstração, e vai para o log do servidor.</td>
+          <td>O mesmo código sai por e-mail ou SMS. A tela é idêntica; o campo já está lá esperando o que a pessoa recebeu.</td>
+        </tr>
+        <tr>
+          <td>Base de clientes</td>
+          <td>Semeada no MySQL, com dois clientes e quatro pessoas na equipe.</td>
+          <td>Cadastro real da Claro. O primeiro acesso continua igual.</td>
+        </tr>
+        <tr>
+          <td>Modelo de linguagem</td>
+          <td>Gemini na camada gratuita, chamado só quando as regras não bastam.</td>
+          <td>Cota paga e modelo dedicado. Se ele cair, as regras seguem respondendo sozinhas.</td>
+        </tr>
+        <tr>
+          <td>Telefone informado</td>
+          <td>Não verificado. Serve só para reencontrar a conversa.</td>
+          <td>Confirmação por SMS antes de gravar o número.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Como rodar</h2>
+
+  <p>
+    Um comando sobe o banco no Docker, semeia a base e liga os quatro processos:
+    <code>npm run start:all</code>. A API responde em <code class="num">:3333</code>, o site em
+    <code class="num">:5173</code>, o console em <code class="num">:5174</code> e o WhatsApp simulado
+    em <code class="num">:5175</code>. A suíte tem <strong>321 testes</strong>, e roda contra o banco
+    de verdade em vez de mocks de repositório.
+  </p>
+
+</div>
