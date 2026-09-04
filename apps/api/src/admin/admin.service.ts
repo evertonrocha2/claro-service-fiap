@@ -2,6 +2,7 @@ import type { Channel, ConversationStatus, Intent, Result } from '@sync/contract
 import { err, ok } from '@sync/contracts'
 import type { PrismaClient } from '@sync/db'
 import type { ICustomerRepository, IMessageRepository } from '../context/index.js'
+import { extractHandoffCode } from '../conversation/handoff.use-case.js'
 import type { OfferInsightService } from '../insights/offer-insight.service.js'
 
 export type QueueFilters = {
@@ -88,6 +89,18 @@ export function maskCpf(cpf: string): string {
  */
 const PRECISAM_DE_GENTE: ConversationStatus[] = ['BOT', 'WAITING_HUMAN', 'WITH_HUMAN']
 
+/**
+ * A ultima coisa que o cliente pediu, ignorando o codigo de continuidade.
+ *
+ * O texto do handoff e controle: e o que o link preenche para amarrar as duas
+ * conversas. Como titulo do cartao ele nao diz nada sobre o problema, e depois
+ * de uma migracao de canal era o que aparecia em todos.
+ */
+function ultimoPedido(mensagens: { text: string }[]): string | null {
+  const pedido = mensagens.find((m) => extractHandoffCode(m.text) === null)
+  return pedido?.text ?? mensagens[0]?.text ?? null
+}
+
 /** Quem ainda nao tem dono. O atendente pode entrar nos dois. */
 const SEM_DONO: ConversationStatus[] = ['BOT', 'WAITING_HUMAN']
 
@@ -113,10 +126,14 @@ export class AdminService {
         agent: true,
         // Só mensagem do cliente: o card precisa mostrar o problema, não a
         // última fala do bot, que é sempre a mesma frase de escalonamento.
+        //
+        // Três, e não uma: a última pode ser o código de continuidade, que é
+        // controle e não pedido. Depois de um handoff, todo card do quadro
+        // passava a se chamar "Continuar atendimento SYNC-…".
         messages: {
           where: { sender: 'CUSTOMER' },
           orderBy: { createdAt: 'desc' },
-          take: 1,
+          take: 3,
         },
       },
       orderBy: { updatedAt: 'asc' },
@@ -132,7 +149,7 @@ export class AdminService {
       status: c.status,
       serviceLabel: c.service?.label ?? null,
       waitingSeconds: Math.max(0, Math.floor((now.getTime() - c.updatedAt.getTime()) / 1000)),
-      lastMessage: c.messages[0]?.text ?? null,
+      lastMessage: ultimoPedido(c.messages),
       assignedAgentName: c.agent?.name ?? null,
     }))
   }

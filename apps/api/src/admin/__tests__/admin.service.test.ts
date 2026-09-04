@@ -228,3 +228,45 @@ test('o detalhe diz de quem é o atendimento, para a interface não mentir', asy
   const r = await admin.detail(c.id)
   expect(r.success && r.data.assignedAgentId).toBe(bruno.id)
 })
+
+test('o titulo do card ignora o codigo de continuidade', async () => {
+  // O texto do handoff e controle, nao pedido: e o que o link preenche para
+  // amarrar as duas conversas. Depois de uma migracao de canal, todo card do
+  // quadro passava a se chamar "Continuar atendimento SYNC-...".
+  const c = await conversaEsperando('PROBLEMA_TECNICO')
+
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'SITE',
+    direction: 'INBOUND',
+    sender: 'CUSTOMER',
+    text: 'minha internet esta caindo toda hora',
+  })
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'WHATSAPP',
+    direction: 'INBOUND',
+    sender: 'CUSTOMER',
+    text: 'Continuar atendimento SYNC-ABCDEFGHJKMNPQRS',
+  })
+
+  const [item] = await admin.queue({})
+  expect(item?.lastMessage).toBe('minha internet esta caindo toda hora')
+})
+
+test('quando so ha o codigo, ele aparece em vez de nada', async () => {
+  // Cartao sem titulo nenhum seria pior: sobra um retangulo vazio na coluna.
+  const c = await conversaEsperando('PROBLEMA_TECNICO')
+  await prisma.message.deleteMany({ where: { conversationId: c.id } })
+
+  await mensagens.append({
+    conversationId: c.id,
+    channel: 'WHATSAPP',
+    direction: 'INBOUND',
+    sender: 'CUSTOMER',
+    text: 'Continuar atendimento SYNC-ABCDEFGHJKMNPQRS',
+  })
+
+  const [item] = await admin.queue({})
+  expect(item?.lastMessage).toContain('SYNC-')
+})

@@ -1,5 +1,5 @@
-import { Clock, ExternalLink, Sparkles } from 'lucide-react'
-import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
+import { ArrowRight, Clock, ExternalLink, Sparkles } from 'lucide-react'
+import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem } from '../api.js'
 import { ticketHref } from '../route.js'
 
 export type BoardProps = {
@@ -35,12 +35,11 @@ function Card({
   selected: boolean
   onSelect: () => void
 }) {
-  const calor = waitHeat(item.waitingSeconds)
-
   // Conversa da assistente não está esperando uma pessoa, então não fica
   // vermelha por tempo: o cronômetro ali mediria a coisa errada.
   const comAssistente = item.status === 'BOT'
   const urgente = !comAssistente && item.waitingSeconds >= URGENTE_SEGUNDOS
+  const cruzouCanal = item.originChannel !== item.channel
 
   // Sem mensagem do cliente o cartão ficaria sem título. Nesse caso o nome
   // assume o lugar, que é a única coisa que resta para distinguir a linha.
@@ -52,16 +51,9 @@ function Card({
        atendimento inteiro em outra aba, para trabalhar sem perder a fila de
        vista. Um link dentro de um botão seria HTML inválido, então os dois são
        irmãos dentro do cartão. */
-    <article
-      className={`card ${selected ? 'is-selected' : ''} ${comAssistente ? 'card--bot' : ''}`}
-    >
-      {/* A barra cresce com a espera e vira vermelha ao passar de cinco minutos. */}
-      <span
-        className={`card__spine ${urgente ? 'card__spine--urgent' : ''}`}
-        style={{ height: `${comAssistente ? 6 : Math.max(calor * 100, 6)}%` }}
-        aria-hidden="true"
-      />
-
+    /* Todos brancos. A situacao vive na etiqueta, nao no fundo: fundo diferente
+       por estado fazia o quadro parecer ter dois tipos de cartao. */
+    <article className={`card ${selected ? 'is-selected' : ''}`}>
       <a
         className="card__expand"
         href={ticketHref(item.id)}
@@ -78,16 +70,26 @@ function Card({
 
         <div className="card__labels">
           {/* Cor por canal, como as etiquetas de um quadro de tarefas: e o que
-              deixa ver de longe que uma coluna inteira veio do WhatsApp. */}
-          <span className={`tagline tagline--${item.channel.toLowerCase()}`}>
+              deixa ver de longe que uma coluna inteira veio do WhatsApp.
+              Quando a conversa atravessou de canal, a origem entra na mesma
+              etiqueta em vez de abrir uma segunda: duas etiquetas de canal
+              quebravam a linha e faziam o cartao crescer so em alguns casos. */}
+          <span
+            className={`tagline tagline--${item.channel.toLowerCase()}`}
+            title={
+              cruzouCanal
+                ? `Comecou em ${CHANNEL_LABELS[item.originChannel]} e continua em ${CHANNEL_LABELS[item.channel]}`
+                : undefined
+            }
+          >
+            {cruzouCanal && (
+              <>
+                {CHANNEL_LABELS[item.originChannel]}
+                <ArrowRight size={9} strokeWidth={3} aria-hidden="true" />
+              </>
+            )}
             {CHANNEL_LABELS[item.channel]}
           </span>
-
-          {item.originChannel !== item.channel && (
-            <span className="tagline" title="Atendimento iniciado em outro canal">
-              origem {CHANNEL_LABELS[item.originChannel]}
-            </span>
-          )}
 
           {comAssistente && (
             <span className="tagline tagline--bot">

@@ -235,11 +235,3 @@ export function formatWait(seconds: number): string {
   if (minutos < 60) return `${minutos}min`
   return `${Math.floor(minutos / 60)}h${String(minutos % 60).padStart(2, '0')}`
 }
-
-/**
- * Grau de urgência pela espera, de 0 a 1. Alimenta a barra na borda do card.
- * Satura em 10 minutos: além disso a diferença já não muda o que o atendente faz.
- */
-export function waitHeat(seconds: number): number {
-  return Math.min(seconds / 600, 1)
-}

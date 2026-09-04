@@ -533,7 +533,6 @@ button {
   position: relative;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line);
   border-radius: 4px;
   overflow: hidden;
   transition:
@@ -592,38 +591,22 @@ button {
   box-shadow: 0 1px 3px rgb(26 29 33 / 0.1);
 }
 
-/* A conversa da IA fica visivel sem competir com quem espera uma pessoa. */
-.card--bot {
-  border-left-color: #c7ccd4;
-  background: var(--bg);
-}
-
 .card.is-selected {
   border-color: var(--claro-red);
   box-shadow: 0 0 0 1px var(--claro-red);
 }
 
-/* Barra que cresce e escurece com a espera. Não é etiqueta: é acúmulo que se
-   lê de canto de olho no quadro inteiro. */
-.card__spine {
-  position: absolute;
-  left: -3px;
-  bottom: 0;
-  width: 3px;
-  background: var(--amber);
-}
-
-.card__spine--urgent {
-  background: var(--claro-red);
-}
-
 /* O pedido do cliente e o titulo do cartao, como o resumo de uma tarefa num
    quadro. Duas linhas no maximo: a terceira ja e leitura, nao varredura. */
+/* Sempre duas linhas de altura, mesmo com uma linha de texto.
+   Cartoes de alturas diferentes na mesma coluna desalinham o rodape de um para
+   o outro e o olho perde o eixo ao descer a lista. */
 .card__summary {
   margin: 0;
   padding-right: 22px;
   font-size: 13px;
   line-height: 1.4;
+  min-height: 2.8em;
   color: var(--ink);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -631,11 +614,14 @@ button {
   overflow: hidden;
 }
 
+/* Uma linha so. Sao no maximo duas etiquetas, canal e assistente, porque a
+   origem entrou dentro da etiqueta de canal em vez de abrir a propria. */
 .card__labels {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
   margin-top: 8px;
+  min-height: 17px;
 }
 
 /* Etiqueta chapada, sem borda e sem raio grande: e rotulo, nao botao. */
@@ -643,6 +629,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;
   padding: 2px 6px;
   border-radius: 3px;
   background: var(--panel-2);
@@ -674,11 +661,14 @@ button {
   color: var(--muted);
 }
 
+/* Piso na altura do disco: sem ele, o cartao sem responsavel ficava alguns
+   pixels mais baixo que o vizinho. */
 .card__foot {
   display: flex;
   align-items: center;
   gap: 7px;
   margin-top: 9px;
+  min-height: 20px;
   font-size: 11px;
   color: var(--muted);
 }
