@@ -1,10 +1,10 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
-import { PrismaConversationRepository, PrismaCustomerRepository } from '../../context/index.js'
+import { PrismaConversationRepository } from '../../context/index.js'
 import { SetContactUseCase } from '../set-contact.use-case.js'
 
 const conversas = new PrismaConversationRepository(prisma)
-const caso = new SetContactUseCase(conversas, new PrismaCustomerRepository(prisma))
+const caso = new SetContactUseCase(conversas)
 
 beforeEach(async () => {
   await prisma.offerInsight.deleteMany()
@@ -30,14 +30,29 @@ test('grava o telefone normalizado na conversa', async () => {
   expect((await conversas.findById(c.id))?.contactPhone).toBe('+551134567890')
 })
 
-test('telefone de cliente cadastrado tambem identifica a conversa', async () => {
+test('telefone de cliente cadastrado NAO identifica a conversa', async () => {
   const c = await anonima()
+
+  // Telefone nao e segredo. Se informar o numero de alguem promovesse a
+  // conversa aquela pessoa, qualquer visitante leria o nome, o servico e o
+  // vencimento da fatura dela sem token nenhum. Foi exatamente o que acontecia.
   const r = await caso.execute(c.id, '11987654321')
+  expect(r.success).toBe(true)
 
-  expect(r.success && r.data.identified).toBe(true)
+  expect((await conversas.findById(c.id))?.customerId).toBeNull()
+})
 
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  expect((await conversas.findById(c.id))?.customerId).toBe(maria.id)
+test('a resposta nao revela se o numero e de um cliente cadastrado', async () => {
+  const c = await anonima()
+
+  const doCliente = await caso.execute(c.id, '11987654321')
+  const desconhecido = await caso.execute(c.id, '11900000000')
+
+  if (!doCliente.success || !desconhecido.success) throw new Error('falhou')
+
+  // Respostas com a mesma forma. Diferenciar daria um oraculo para descobrir
+  // quais telefones sao clientes da Claro, testando um por um.
+  expect(Object.keys(doCliente.data).sort()).toEqual(Object.keys(desconhecido.data).sort())
 })
 
 test('telefone invalido e recusado', async () => {

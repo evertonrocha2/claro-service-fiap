@@ -81,11 +81,7 @@ export const api = {
   logout: (refreshToken: string) => post<{ ok: true }>('/api/auth/logout', { refreshToken }),
 
   setContact: (id: string, phone: string, token?: string) =>
-    post<{ phone: string; identified: boolean }>(
-      `/api/conversations/${id}/contact`,
-      { phone },
-      token,
-    ),
+    post<{ phone: string }>(`/api/conversations/${id}/contact`, { phone }, token),
 
   loadConversation: (id: string, token?: string) =>
     get<LoadedConversation>(`/api/conversations/${id}`, token),

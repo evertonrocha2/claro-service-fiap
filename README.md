@@ -117,6 +117,13 @@ markers before the request leaves, and the real entities are extracted locally b
 regex. The cache is keyed on the redacted text, which also means two people
 asking the same thing with different CPFs share one classification.
 
+**A phone number never grants identity.** The contact phone a visitor types is
+unverified, so it only helps find a conversation again. An earlier version
+promoted the conversation to whoever owned that number, which leaked a
+customer's name, service and invoice date to anyone who knew their phone.
+Identity comes from login or from a CPF given in the dialogue. Confirming the
+number by SMS is the production requirement, and is not in this MVP.
+
 **Accounts cannot be enumerated.** Unknown email, wrong password and an account
 without first access all return the same error constant.
 

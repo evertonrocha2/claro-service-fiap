@@ -1,5 +1,5 @@
 import { err, ok, type Result } from '@sync/contracts'
-import type { IConversationRepository, ICustomerRepository } from '../context/index.js'
+import type { IConversationRepository } from '../context/index.js'
 import { normalizePhone } from '../identity/phone.js'
 
 /**
@@ -9,20 +9,32 @@ import { normalizePhone } from '../identity/phone.js'
  * ao escrever no WhatsApp depois, e o atendimento recomeça do zero. O número é a
  * única chave que os dois canais compartilham.
  *
- * Se o número já pertence a um cliente cadastrado, a conversa passa a ser dele:
- * informar o telefone acaba servindo de identificação.
+ * ATENÇÃO, e o motivo de este arquivo ser curto: o telefone informado aqui é
+ * NÃO VERIFICADO e nunca concede identidade.
+ *
+ * A primeira versão promovia a conversa ao cliente dono daquele número. Era
+ * falha de divulgação de dados: telefone não é segredo, então qualquer pessoa
+ * digitava o número de outra e o bot respondia com o nome, o serviço e o
+ * vencimento da fatura dela, sem token nenhum. Identidade vem de login ou de
+ * CPF no diálogo, não de um campo que o visitante preenche.
+ *
+ * O número serve só para reencontrar a conversa. E isso é seguro porque a ponte
+ * entre canais resolve o cliente registrado antes: mensagem do WhatsApp tem o
+ * telefone validado pela própria Meta, então `findOpenByCustomer` decide primeiro
+ * e o `contactPhone` não verificado só é consultado para números sem dono
+ * cadastrado, onde as duas pontas são igualmente anônimas.
+ *
+ * Para produção, o caminho é confirmar a posse com código enviado por SMS antes
+ * de gravar. Fora do escopo deste MVP, e anotado como dívida consciente.
  */
 export class SetContactUseCase {
-  constructor(
-    private readonly conversations: IConversationRepository,
-    private readonly customers: ICustomerRepository,
-  ) {}
+  constructor(private readonly conversations: IConversationRepository) {}
 
   async execute(
     conversationId: string,
     phoneBruto: string,
     requesterCustomerId?: string,
-  ): Promise<Result<{ phone: string; identified: boolean }>> {
+  ): Promise<Result<{ phone: string }>> {
     const normalizado = normalizePhone(phoneBruto)
     if (!normalizado.success) return normalizado
 
@@ -36,13 +48,11 @@ export class SetContactUseCase {
     }
 
     const phone = normalizado.data
-    const dono = await this.customers.findByPhone(phone)
+    await this.conversations.update(conversationId, { contactPhone: phone })
 
-    await this.conversations.update(conversationId, {
-      contactPhone: phone,
-      ...(dono && !conversa.customerId ? { customerId: dono.id } : {}),
-    })
-
-    return ok({ phone, identified: dono !== null })
+    // A resposta não diz se o número pertence a um cliente cadastrado. Dizer
+    // transformaria esta rota num oráculo para descobrir quais telefones são
+    // clientes da Claro, testando um por um.
+    return ok({ phone })
   }
 }

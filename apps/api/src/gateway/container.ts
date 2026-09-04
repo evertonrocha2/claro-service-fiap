@@ -52,7 +52,7 @@ export function buildContainer(): Container {
       buildClassifier(),
     ),
     readConversation: new ReadConversationUseCase(conversations, messages, customers),
-    setContact: new SetContactUseCase(conversations, customers),
+    setContact: new SetContactUseCase(conversations),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
       login: new LoginUseCase(customers, refreshTokens, tokens, new PrismaAgentRepository(prisma)),

@@ -159,3 +159,43 @@ test('conversa de outro cliente devolve 403', async () => {
 test('conversa inexistente devolve 404', async () => {
   expect((await request(app).get('/api/conversations/nao-existe')).status).toBe(404)
 })
+
+test('informar o telefone de outra pessoa nao da acesso aos dados dela', async () => {
+  // Reproduz a falha encontrada pela revisao de seguranca. Telefone nao e
+  // segredo: sabendo so o numero da Maria, um anonimo obtinha o nome dela, o
+  // servico contratado e o vencimento da fatura, sem token nenhum.
+  const inicio = await request(app).post('/api/channels/site/messages').send({ text: 'oi' })
+  const id = inicio.body.conversationId as string
+
+  const contato = await request(app)
+    .post(`/api/conversations/${id}/contact`)
+    .send({ phone: '11987654321' })
+  expect(contato.status).toBe(200)
+
+  // A rota nao diz se aquele numero pertence a um cliente cadastrado.
+  expect(contato.body).not.toHaveProperty('identified')
+
+  const depois = await request(app)
+    .post('/api/channels/site/messages')
+    .send({ text: 'quero a segunda via da fatura', conversationId: id })
+
+  expect(depois.body.context.identified).toBe(false)
+  expect(depois.body.context.customerName).toBeNull()
+  expect(depois.body.context.serviceLabel).toBeNull()
+  expect(depois.body.reply).not.toContain('20/05')
+  expect(depois.body.reply).not.toContain('Maria')
+  expect(depois.body.reply).not.toContain('Claro Net Fibra')
+})
+
+test('o telefone gravado ainda serve para reencontrar a conversa', async () => {
+  // A correcao nao pode ter matado a continuidade entre canais. Numero sem dono
+  // cadastrado continua ligando os dois lados, que e o caso de uso legitimo.
+  const inicio = await request(app).post('/api/channels/site/messages').send({ text: 'oi' })
+  const id = inicio.body.conversationId as string
+
+  await request(app).post(`/api/conversations/${id}/contact`).send({ phone: '11900001111' })
+
+  const conversa = await prisma.conversation.findUniqueOrThrow({ where: { id } })
+  expect(conversa.contactPhone).toBe('+5511900001111')
+  expect(conversa.customerId).toBeNull()
+})
