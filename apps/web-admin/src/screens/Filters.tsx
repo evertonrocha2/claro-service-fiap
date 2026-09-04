@@ -45,7 +45,8 @@ export function Filters({ value, onChange, showing, total, withStatus = true }: 
           type="search"
           value={value.busca}
           onChange={(e) => onChange({ ...value, busca: e.target.value })}
-          placeholder="Buscar por nome, protocolo ou mensagem"
+          placeholder="Buscar"
+          title="Busca por nome, protocolo ou mensagem"
           aria-label="Buscar atendimentos"
         />
       </div>

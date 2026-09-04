@@ -65,7 +65,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
           <span className="fact__label">Tempo de espera</span>
           <span className="fact__value fact__value--mono">{formatWait(detail.waitingSeconds)}</span>
         </div>
-        <div className="fact fact--wide">
+        <div className="fact">
           <span className="fact__label">Telefone</span>
           <span className="fact__value fact__value--mono">
             {detail.customerPhone ?? 'Não informado'}
@@ -73,7 +73,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
         </div>
 
         {detail.serviceLabel && (
-          <div className="fact fact--wide">
+          <div className="fact">
             <span className="fact__label">Serviço</span>
             <span className="fact__value">{detail.serviceLabel}</span>
           </div>

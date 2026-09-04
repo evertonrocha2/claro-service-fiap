@@ -1,4 +1,4 @@
-import { Clock, ExternalLink, Sparkles, UserRound } from 'lucide-react'
+import { Clock, ExternalLink, Sparkles } from 'lucide-react'
 import { CHANNEL_LABELS, formatWait, INTENT_COLUMNS, type QueueItem, waitHeat } from '../api.js'
 import { ticketHref } from '../route.js'
 
@@ -10,6 +10,22 @@ export type BoardProps = {
 
 const URGENTE_SEGUNDOS = 300
 
+/** Iniciais para o disco do responsavel, no maximo duas. */
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  const primeira = partes[0]?.[0] ?? ''
+  const ultima = partes.length > 1 ? (partes.at(-1)?.[0] ?? '') : ''
+  return (primeira + ultima).toUpperCase()
+}
+
+/**
+ * Cartão no formato de quadro de tarefas.
+ *
+ * O que a pessoa pediu virou o título, e não o nome dela: a coluna já diz a
+ * intenção, e o que distingue um cartão do outro dentro da mesma coluna é o
+ * pedido. Abaixo vêm as etiquetas de canal e situação, e o rodapé junta quem é
+ * o cliente com quem está atendendo.
+ */
 function Card({
   item,
   selected,
@@ -21,10 +37,14 @@ function Card({
 }) {
   const calor = waitHeat(item.waitingSeconds)
 
-  // Conversa da assistente nao esta esperando uma pessoa, entao nao fica
-  // vermelha por tempo: o cronometro ali mediria a coisa errada.
+  // Conversa da assistente não está esperando uma pessoa, então não fica
+  // vermelha por tempo: o cronômetro ali mediria a coisa errada.
   const comAssistente = item.status === 'BOT'
   const urgente = !comAssistente && item.waitingSeconds >= URGENTE_SEGUNDOS
+
+  // Sem mensagem do cliente o cartão ficaria sem título. Nesse caso o nome
+  // assume o lugar, que é a única coisa que resta para distinguir a linha.
+  const titulo = item.lastMessage ?? item.customerName ?? 'Atendimento sem mensagem'
 
   return (
     /* O cartão guarda dois destinos, e por isso deixou de ser um botão só.
@@ -50,47 +70,54 @@ function Card({
         title="Abrir o atendimento em outra aba"
         aria-label={`Abrir o atendimento de ${item.customerName ?? 'cliente não identificado'} em outra aba`}
       >
-        <ExternalLink size={13} strokeWidth={2.2} aria-hidden="true" />
+        <ExternalLink size={12} strokeWidth={2.2} aria-hidden="true" />
       </a>
 
       <button type="button" className="card__pick" aria-current={selected} onClick={onSelect}>
-        <div className={`card__who ${item.customerName ? '' : 'card__who--unknown'}`}>
-          {item.customerName ?? 'Não identificado'}
-        </div>
+        <p className="card__summary">{titulo}</p>
 
-        <div className="card__meta">
-          {comAssistente ? (
-            <span className="card__bot">
-              <Sparkles size={12} strokeWidth={2.2} aria-hidden="true" />
-              Com a assistente
-            </span>
-          ) : (
-            <span className={urgente ? 'card__wait--urgent' : undefined}>
-              {/* Cor sozinha nao serve de aviso: quem nao distingue vermelho de
-                  cinza le so um numero. O relogio aparece junto da cor. */}
-              {urgente && <Clock size={11} strokeWidth={2.4} aria-hidden="true" />}
-              {formatWait(item.waitingSeconds)}
-            </span>
-          )}
-          {/* Sem pontos separadores: quando a linha quebrava, o ponto ficava
-              pendurado sozinho no fim da primeira linha. O espaco separa igual
-              e nao tem como sobrar. */}
-          <span className="card__channel">{CHANNEL_LABELS[item.channel]}</span>
+        <div className="card__labels">
+          {/* Cor por canal, como as etiquetas de um quadro de tarefas: e o que
+              deixa ver de longe que uma coluna inteira veio do WhatsApp. */}
+          <span className={`tagline tagline--${item.channel.toLowerCase()}`}>
+            {CHANNEL_LABELS[item.channel]}
+          </span>
+
           {item.originChannel !== item.channel && (
-            <span title="Atendimento iniciado em outro canal">
+            <span className="tagline" title="Atendimento iniciado em outro canal">
               origem {CHANNEL_LABELS[item.originChannel]}
             </span>
           )}
+
+          {comAssistente && (
+            <span className="tagline tagline--bot">
+              <Sparkles size={10} strokeWidth={2.4} aria-hidden="true" />
+              Assistente
+            </span>
+          )}
         </div>
 
-        {item.lastMessage && <p className="card__last">{item.lastMessage}</p>}
+        <div className="card__foot">
+          <span className={`card__wait ${urgente ? 'card__wait--urgent' : ''}`}>
+            <Clock size={11} strokeWidth={2.2} aria-hidden="true" />
+            {formatWait(item.waitingSeconds)}
+          </span>
 
-        {item.assignedAgentName && (
-          <div className="card__agent">
-            <UserRound size={11} strokeWidth={2.2} aria-hidden="true" />
-            {item.assignedAgentName}
-          </div>
-        )}
+          {/* Corta com reticencias quando a coluna e estreita, e o nome inteiro
+              fica no title. Cortar e melhor do que empurrar o disco para fora. */}
+          <span
+            className={`card__who ${item.customerName ? '' : 'card__who--unknown'}`}
+            title={item.customerName ?? 'Cliente não identificado'}
+          >
+            {item.customerName ?? 'Não identificado'}
+          </span>
+
+          {item.assignedAgentName && (
+            <span className="card__avatar" title={`Em atendimento por ${item.assignedAgentName}`}>
+              {iniciais(item.assignedAgentName)}
+            </span>
+          )}
+        </div>
       </button>
     </article>
   )

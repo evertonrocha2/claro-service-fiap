@@ -534,7 +534,7 @@ button {
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
   transition:
     border-color 120ms ease,
@@ -549,7 +549,7 @@ button {
   text-align: left;
   background: none;
   border: none;
-  padding: 10px 12px 11px;
+  padding: 9px 11px 8px;
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -566,16 +566,16 @@ button {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
   background: var(--panel);
-  color: var(--ink-muted);
-  opacity: 0.5;
+  color: var(--muted);
+  opacity: 0.55;
   transition:
     opacity 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    background 120ms ease;
 }
 
 .card:hover .card__expand,
@@ -585,25 +585,17 @@ button {
 
 .card__expand:hover {
   color: var(--claro-red);
-  border-color: var(--claro-red);
+  background: var(--claro-tint);
 }
 
 .card:hover {
-  box-shadow: 0 1px 4px rgb(26 29 33 / 0.09);
+  box-shadow: 0 1px 3px rgb(26 29 33 / 0.1);
 }
 
 /* A conversa da IA fica visivel sem competir com quem espera uma pessoa. */
 .card--bot {
   border-left-color: #c7ccd4;
   background: var(--bg);
-}
-
-.card__bot {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-  font-weight: 600;
 }
 
 .card.is-selected {
@@ -625,46 +617,83 @@ button {
   background: var(--claro-red);
 }
 
-.card__who {
-  /* O icone de abrir flutua no canto. Sem esta folga um nome longo passava por
-     baixo dele e as duas coisas se sobrepunham. */
-  padding-right: 24px;
-  font-weight: 600;
-  font-size: var(--t-body);
-  line-height: 1.25;
-  margin-bottom: 3px;
+/* O pedido do cliente e o titulo do cartao, como o resumo de uma tarefa num
+   quadro. Duas linhas no maximo: a terceira ja e leitura, nao varredura. */
+.card__summary {
+  margin: 0;
+  padding-right: 22px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.card__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* Etiqueta chapada, sem borda e sem raio grande: e rotulo, nao botao. */
+.tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.card__who--unknown {
-  color: var(--muted);
-  font-weight: 500;
+.tagline--site {
+  background: #e8eefb;
+  color: #2a4d9b;
 }
 
-.card__meta {
+.tagline--whatsapp {
+  background: #e2f3e9;
+  color: #1c6b43;
+}
+
+.tagline--app {
+  background: #efe9fb;
+  color: #573ba6;
+}
+
+.tagline--bot {
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.card__foot {
   display: flex;
   align-items: center;
-  gap: 3px 10px;
-  font-size: var(--t-micro);
+  gap: 7px;
+  margin-top: 9px;
+  font-size: 11px;
   color: var(--muted);
-  flex-wrap: wrap;
 }
 
-.card__meta > span {
+.card__wait {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
 }
 
-/* Um tom acima do resto da linha. Sem os pontos separadores e o contraste que
-   agrupa: espera e situacao em cinza, canal um pouco mais firme. */
-.card__channel {
-  color: var(--ink-2);
-  font-weight: 500;
+.card__wait svg {
+  opacity: 0.7;
 }
 
 .card__wait--urgent {
@@ -672,35 +701,41 @@ button {
   font-weight: 600;
 }
 
-.card__last {
-  margin: 7px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
+.card__wait--urgent svg {
+  opacity: 1;
+}
+
+/* O nome do cliente empurra o disco do responsavel para a direita e some com
+   reticencias antes de empurrar qualquer coisa para fora do cartao. */
+.card__who {
+  margin-left: auto;
+  min-width: 0;
+  font-weight: 500;
   color: var(--ink-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Quem esta com o atendimento e atribuicao, nao alerta.
-   Em ambar e sem separacao a linha lia como aviso e disputava atencao com a
-   espera vermelha, que e o unico numero que deveria gritar no quadro. */
-.card__agent {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 8px;
-  padding-top: 7px;
-  border-top: 1px solid var(--line);
-  font-size: 11px;
-  font-weight: 600;
+.card__who--unknown {
   color: var(--muted);
+  font-weight: 400;
 }
 
-.card__agent svg {
+/* Disco com iniciais no lugar da foto: diz quem esta com o atendimento sem
+   gastar uma linha inteira do cartao. */
+.card__avatar {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  opacity: 0.8;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--claro-red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* ---------- detail ---------- */
@@ -795,42 +830,38 @@ button {
 
 /* Mesma unidade de linha do resto: rótulo e valor sempre nas mesmas alturas,
    coluna esquerda e direita alinhadas entre si. */
+/* Tabela fina de rotulo e valor, uma linha por dado.
+   Em duas colunas com o rotulo acima do valor, sete dados ocupavam metade da
+   coluna e empurravam a conversa, que e o que o atendente precisa ler. */
 .detail__facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   border-bottom: 1px solid var(--line);
 }
 
 .fact {
-  padding: 11px 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 18px;
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
 
-.fact:nth-child(odd) {
-  border-right: 1px solid var(--line);
-}
-
-.detail__facts .fact:nth-last-child(-n + 2) {
+.fact:last-child {
   border-bottom: none;
 }
 
-.fact--wide {
-  grid-column: 1 / -1;
-  border-right: none;
-}
-
 .fact__label {
-  display: block;
-  font-size: var(--t-micro);
-  font-weight: 600;
+  flex: 0 0 108px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
-  margin-bottom: 3px;
 }
 
 .fact__value {
-  display: block;
-  font-size: var(--t-body);
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 12.5px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
