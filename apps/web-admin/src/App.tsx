@@ -1,4 +1,5 @@
-import { ClaroLogo } from '@sync/chat-ui'
+import { AppSwitcher, ClaroLogo } from '@sync/chat-ui'
+import { History as HistoryIcon, Inbox, LogOut } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, type ConversationDetail, type Metrics, type QueueItem } from './api.js'
 import { AgentLogin } from './screens/AgentLogin.js'
@@ -115,26 +116,7 @@ export function App() {
         </span>
         <span className="bar__where">Console de Atendimento</span>
 
-        <nav className="nav" aria-label="Seções do console">
-          <button
-            type="button"
-            className="nav__item"
-            aria-current={aba === 'fila'}
-            onClick={() => trocarAba('fila')}
-          >
-            Fila de atendimento
-            <span className="nav__badge">{fila.length}</span>
-          </button>
-          <button
-            type="button"
-            className="nav__item"
-            aria-current={aba === 'historico'}
-            onClick={() => trocarAba('historico')}
-          >
-            Histórico
-            <span className="nav__badge">{encerrados.length}</span>
-          </button>
-        </nav>
+        <AppSwitcher current="console" />
 
         <div className="bar__right">
           {erro && <span className="notice notice--error">{erro}</span>}
@@ -145,6 +127,7 @@ export function App() {
             </span>
           </span>
           <button className="linkish" type="button" onClick={sair}>
+            <LogOut size={14} strokeWidth={2} />
             Sair
           </button>
         </div>
@@ -152,13 +135,38 @@ export function App() {
 
       <Pulse metrics={metricas} />
 
-      <Filters
-        value={filtros}
-        onChange={setFiltros}
-        showing={visiveis.length}
-        total={base.length}
-        withStatus={aba === 'fila'}
-      />
+      <div className="toolbar">
+        <nav className="nav" aria-label="Seções do console">
+          <button
+            type="button"
+            className="nav__item"
+            aria-current={aba === 'fila'}
+            onClick={() => trocarAba('fila')}
+          >
+            <Inbox size={15} strokeWidth={2} />
+            Fila de atendimento
+            <span className="nav__badge">{fila.length}</span>
+          </button>
+          <button
+            type="button"
+            className="nav__item"
+            aria-current={aba === 'historico'}
+            onClick={() => trocarAba('historico')}
+          >
+            <HistoryIcon size={15} strokeWidth={2} />
+            Histórico
+            <span className="nav__badge">{encerrados.length}</span>
+          </button>
+        </nav>
+
+        <Filters
+          value={filtros}
+          onChange={setFiltros}
+          showing={visiveis.length}
+          total={base.length}
+          withStatus={aba === 'fila'}
+        />
+      </div>
 
       <div className="workarea">
         {aba === 'fila' ? (

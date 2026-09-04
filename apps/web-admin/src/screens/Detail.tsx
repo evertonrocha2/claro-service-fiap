@@ -1,3 +1,4 @@
+import { CircleCheck, Hand, MousePointerClick, Send } from 'lucide-react'
 import { useState } from 'react'
 import {
   api,
@@ -125,6 +126,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
               disabled={ocupado}
               onClick={() => agir(() => api.claim(token, detail.id))}
             >
+              <Hand size={15} strokeWidth={2} />
               Assumir atendimento
             </button>
           </>
@@ -152,6 +154,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
                   })
                 }
               >
+                <Send size={14} strokeWidth={2} />
                 Enviar
               </button>
               <button
@@ -160,6 +163,7 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
                 disabled={ocupado}
                 onClick={() => agir(() => api.resolve(token, detail.id))}
               >
+                <CircleCheck size={14} strokeWidth={2} />
                 Encerrar
               </button>
             </div>
@@ -180,7 +184,9 @@ export function Detail({ token, detail, agentId, onChanged }: DetailProps) {
 export function EmptyDetail() {
   return (
     <div className="empty-detail">
-      Selecione um atendimento para visualizar o histórico completo e os dados já identificados.
+      <MousePointerClick size={26} strokeWidth={1.5} aria-hidden="true" />
+      <p>Selecione um atendimento</p>
+      <span>O histórico completo e os dados já identificados aparecem aqui.</span>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { Channel, ConversationStatus } from '@sync/contracts'
+import { Search, X } from 'lucide-react'
 import { CHANNEL_LABELS } from '../api.js'
 
 export type FilterState = {
@@ -35,6 +36,7 @@ export function Filters({ value, onChange, showing, total, withStatus = true }: 
   return (
     <div className="filters">
       <div className="filters__search">
+        <Search className="filters__search-icon" size={15} strokeWidth={2} aria-hidden="true" />
         <input
           type="search"
           value={value.busca}
@@ -84,6 +86,7 @@ export function Filters({ value, onChange, showing, total, withStatus = true }: 
 
       {ativo && (
         <button type="button" className="filters__clear" onClick={() => onChange(FILTRO_VAZIO)}>
+          <X size={13} strokeWidth={2.5} />
           Limpar filtros
         </button>
       )}

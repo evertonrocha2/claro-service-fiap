@@ -15,6 +15,7 @@ import {
   PrismaMessageRepository,
 } from '../context/index.js'
 import { ConversationOrchestrator } from '../conversation/orchestrator.js'
+import { ReadConversationUseCase } from '../conversation/read-conversation.use-case.js'
 import { IdentityService } from '../identity/identity.service.js'
 import { GeminiClassifier } from '../nlp/gemini-classifier.js'
 import { HybridClassifier } from '../nlp/hybrid-classifier.js'
@@ -24,6 +25,7 @@ import type { IIntentClassifier } from '../nlp/types.js'
 
 export type Container = {
   orchestrator: ConversationOrchestrator
+  readConversation: ReadConversationUseCase
   auth: AuthDeps
   admin: AdminDeps
 }
@@ -46,6 +48,7 @@ export function buildContainer(): Container {
       customers,
       buildClassifier(),
     ),
+    readConversation: new ReadConversationUseCase(conversations, messages, customers),
     auth: {
       firstAccess: new FirstAccessUseCase(customers),
       login: new LoginUseCase(customers, refreshTokens, tokens, new PrismaAgentRepository(prisma)),

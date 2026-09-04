@@ -1,4 +1,5 @@
 import {
+  AppSwitcher,
   ChatComposer,
   type ChatMessage,
   ChatTranscript,
@@ -6,6 +7,7 @@ import {
   ContextRail,
   type ConversationState,
 } from '@sync/chat-ui'
+import { LogOut, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { api, type Session, SyncApiError } from '../api.js'
 
@@ -65,8 +67,8 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
   }
 
   const vazio = sessao
-    ? `Olá, ${sessao.customer.name.split(' ')[0]}. Conte o que está acontecendo e eu resolvo daqui.`
-    : 'Conte o que está acontecendo. Posso ajudar com fatura, problema técnico ou seu plano.'
+    ? `Olá, ${sessao.customer.name.split(' ')[0]}. Descreva o que está acontecendo e resolvemos por aqui.`
+    : 'Descreva o que está acontecendo. Posso ajudar com fatura, problema técnico ou seu plano.'
 
   return (
     <div className="sync app">
@@ -78,36 +80,41 @@ export function ChatScreen({ sessao, onSair, onEntrar }: ChatScreenProps) {
           <span className="topbar__section">Central de Atendimento</span>
         </div>
 
+        <AppSwitcher current="site" />
+
         <div className="topbar__account">
           {sessao ? (
             <>
-              <span className="topbar__name">{sessao.customer.name}</span>
-              <button className="btn btn--link" type="button" onClick={onSair}>
+              <span className="topbar__name">
+                <UserRound size={15} strokeWidth={2} />
+                {sessao.customer.name}
+              </span>
+              <button className="btn btn--quiet" type="button" onClick={onSair}>
+                <LogOut size={14} strokeWidth={2} />
                 Sair
               </button>
             </>
           ) : (
-            <button className="btn btn--link" type="button" onClick={onEntrar}>
+            <button className="btn btn--quiet" type="button" onClick={onEntrar}>
+              <UserRound size={14} strokeWidth={2} />
               Entrar
             </button>
           )}
         </div>
       </header>
 
-      <main className="workspace">
-        <section className="conversation">
-          <ChatTranscript messages={mensagens} waiting={aguardando} emptyMessage={vazio} />
+      <ContextRail state={estado} />
 
-          {erro && (
-            <p className="alert alert--error conversation__error" role="alert">
-              {erro}
-            </p>
-          )}
+      <main className="conversation">
+        <ChatTranscript messages={mensagens} waiting={aguardando} emptyMessage={vazio} />
 
-          <ChatComposer onSend={enviar} disabled={aguardando} placeholder="Escreva sua mensagem" />
-        </section>
+        {erro && (
+          <p className="alert alert--error conversation__error" role="alert">
+            {erro}
+          </p>
+        )}
 
-        <ContextRail state={estado} />
+        <ChatComposer onSend={enviar} disabled={aguardando} placeholder="Escreva sua mensagem" />
       </main>
     </div>
   )

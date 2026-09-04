@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@sync/chat-ui/src/app-switcher.css'
 import '@sync/chat-ui/src/chat-ui.css'
 import { App } from './App.js'
 import './styles.css'

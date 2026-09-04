@@ -302,9 +302,8 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
+  gap: 20px;
+  padding: 12px 24px;
   background: var(--card);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
@@ -322,20 +321,39 @@ body {
 }
 
 .topbar__account {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .topbar__name {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--ink);
 }
 
-.workspace {
-  flex: 1;
-  display: flex;
-  min-height: 0;
+/* Botão discreto com ícone. O link sublinhado da versão anterior competia com
+   o texto ao lado e não parecia clicável de longe. */
+.btn--quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 9px;
+}
+
+.btn--quiet:hover {
+  border-color: var(--ink-muted);
+  color: var(--ink);
 }
 
 .conversation {
@@ -343,6 +361,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--surface);
 }
 
@@ -370,10 +389,6 @@ body {
 
   .auth__form {
     padding: 24px;
-  }
-
-  .workspace {
-    flex-direction: column;
   }
 
   .topbar__section {

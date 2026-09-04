@@ -114,3 +114,48 @@ test('customerId no corpo da requisição é ignorado, só o token vale', async 
   // Sem token, segue anônimo mesmo com o id no corpo.
   expect(r.body.reply.toLowerCase()).toContain('cpf')
 })
+
+test('o cliente lê a própria conversa e vê a resposta do atendente', async () => {
+  const inicio = await request(app)
+    .post('/api/channels/site/messages')
+    .send({ text: 'quero cancelar meu plano' })
+  const id = inicio.body.conversationId as string
+
+  const agente = await request(app)
+    .post('/api/auth/agent/login')
+    .send({ email: 'bruno@claro.com.br', password: 'Atendente123' })
+  const auth = { Authorization: `Bearer ${agente.body.accessToken}` }
+
+  await request(app).post(`/api/admin/conversations/${id}/claim`).set(auth)
+  await request(app)
+    .post(`/api/admin/conversations/${id}/messages`)
+    .set(auth)
+    .send({ text: 'Aqui é o Bruno. Já vi seu pedido.' })
+
+  const lida = await request(app).get(`/api/conversations/${id}`)
+  expect(lida.status).toBe(200)
+  expect(lida.body.protocol).toBe(inicio.body.protocol)
+  expect(lida.body.messages.at(-1).sender).toBe('AGENT')
+  expect(lida.body.messages.at(-1).text).toBe('Aqui é o Bruno. Já vi seu pedido.')
+})
+
+test('conversa de outro cliente devolve 403', async () => {
+  const { accessToken: token } = await primeiroAcessoELogin()
+  const minha = await request(app)
+    .post('/api/channels/site/messages')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ text: 'quero cancelar meu plano' })
+
+  // Sem token, a conversa já tem dono e não pode ser lida.
+  const semToken = await request(app).get(`/api/conversations/${minha.body.conversationId}`)
+  expect(semToken.status).toBe(403)
+
+  const comToken = await request(app)
+    .get(`/api/conversations/${minha.body.conversationId}`)
+    .set('Authorization', `Bearer ${token}`)
+  expect(comToken.status).toBe(200)
+})
+
+test('conversa inexistente devolve 404', async () => {
+  expect((await request(app).get('/api/conversations/nao-existe')).status).toBe(404)
+})

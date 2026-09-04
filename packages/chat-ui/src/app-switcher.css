@@ -1,0 +1,69 @@
+/*
+  Estilo do AppSwitcher, num arquivo próprio.
+  
+  Ele aparece nos dois aplicativos, e cada um nomeia seus tokens de cor de um
+  jeito. Se dependesse deles, o componente sairia sem estilo de um lado e com a
+  cor errada do outro. Aqui os valores são próprios, com tokens --sw-* que quem
+  usa pode sobrescrever.
+*/
+
+.switcher {
+  --sw-bg: #eef0f3;
+  --sw-line: #dfe3e8;
+  --sw-ink: #14161a;
+  --sw-muted: #5f6772;
+  --sw-active: #ffffff;
+
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--sw-bg);
+  border: 1px solid var(--sw-line);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.switcher__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--sw-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 130ms ease,
+    color 130ms ease;
+}
+
+.switcher__item:hover {
+  color: var(--sw-ink);
+  background: rgb(255 255 255 / 0.65);
+}
+
+.switcher__item.is-current {
+  background: var(--sw-active);
+  color: var(--sw-ink);
+  box-shadow: 0 1px 2px rgb(20 22 26 / 0.12);
+  cursor: default;
+}
+
+.switcher__out {
+  opacity: 0.5;
+}
+
+@media (max-width: 860px) {
+  .switcher__item {
+    padding: 8px 10px;
+  }
+
+  .switcher__item span,
+  .switcher__out {
+    display: none;
+  }
+}

@@ -1,4 +1,5 @@
 import { ClaroLogo } from '@sync/chat-ui'
+import { LogIn } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { type AgentSession, api, ConsoleError } from '../api.js'
 
@@ -63,7 +64,8 @@ export function AgentLogin({ onEntrar }: { onEntrar: (s: AgentSession) => void }
         )}
 
         <button className="btn btn--primary" type="submit" disabled={enviando}>
-          {enviando ? 'Entrando…' : 'Entrar'}
+          <LogIn size={15} strokeWidth={2} />
+          {enviando ? 'Entrando' : 'Entrar'}
         </button>
       </form>
     </div>

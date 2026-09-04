@@ -22,6 +22,22 @@ export function createApp(deps: Container): Express {
   app.use('/api/auth', createAuthRouter(deps.auth))
   app.use('/api/admin', createAdminRouter(deps.admin))
 
+  app.get(
+    '/api/conversations/:id',
+    optionalAuth(deps.auth.tokens),
+    async (req: Request, res: Response) => {
+      const dono = req.auth?.kind === 'CUSTOMER' ? req.auth.subjectId : undefined
+      const r = await deps.readConversation.execute(String(req.params.id), dono)
+
+      if (!r.success) {
+        const status = r.error.code === 'CONVERSA_NAO_ENCONTRADA' ? 404 : 403
+        res.status(status).json({ error: r.error })
+        return
+      }
+      res.json(r.data)
+    },
+  )
+
   app.post(
     '/api/channels/:channel/messages',
     optionalAuth(deps.auth.tokens),

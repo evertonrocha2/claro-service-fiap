@@ -17,6 +17,14 @@ export type SendMessageResult = {
   context: NonNullable<ConversationState['context']>
 }
 
+export type LoadedConversation = {
+  conversationId: string
+  protocol: string
+  status: NonNullable<ConversationState['status']>
+  context: NonNullable<ConversationState['context']>
+  messages: { id: string; sender: 'CUSTOMER' | 'BOT' | 'AGENT'; text: string; at: string }[]
+}
+
 export class SyncApiError extends Error {
   constructor(
     readonly code: string,
@@ -24,6 +32,21 @@ export class SyncApiError extends Error {
   ) {
     super(message)
   }
+}
+
+async function get<T>(caminho: string, token?: string): Promise<T> {
+  const resposta = await fetch(caminho, {
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  })
+
+  const dados = await resposta.json().catch(() => null)
+
+  if (!resposta.ok) {
+    const erro = (dados as { error?: ApiError } | null)?.error
+    throw new SyncApiError(erro?.code ?? 'ERRO_DESCONHECIDO', erro?.message ?? 'Falha ao carregar.')
+  }
+
+  return dados as T
 }
 
 async function post<T>(caminho: string, corpo: unknown, token?: string): Promise<T> {
@@ -56,6 +79,9 @@ export const api = {
   login: (email: string, password: string) => post<Session>('/api/auth/login', { email, password }),
 
   logout: (refreshToken: string) => post<{ ok: true }>('/api/auth/logout', { refreshToken }),
+
+  loadConversation: (id: string, token?: string) =>
+    get<LoadedConversation>(`/api/conversations/${id}`, token),
 
   sendMessage: (text: string, conversationId: string | null, token?: string) =>
     post<SendMessageResult>(
