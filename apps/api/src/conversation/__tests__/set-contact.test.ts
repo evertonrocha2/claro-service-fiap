@@ -1,17 +1,13 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaConversationRepository } from '../../context/index.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { SetContactUseCase } from '../set-contact.use-case.js'
 
 const conversas = new PrismaConversationRepository(prisma)
 const caso = new SetContactUseCase(conversas)
 
-beforeEach(async () => {
-  await prisma.offerInsight.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -66,7 +62,7 @@ test('telefone invalido e recusado', async () => {
 test('a sessao que informou o CPF continua podendo gravar o telefone', async () => {
   // Mesma regra da leitura e do handoff: possuir o id basta. O telefone nao
   // concede identidade nenhuma, entao nao ha o que proteger alem do id.
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = await criarCliente()
   const c = await anonima()
   await conversas.update(c.id, { customerId: maria.id })
 

@@ -6,6 +6,7 @@ import {
   PrismaCustomerRepository,
   PrismaMessageRepository,
 } from '../../context/index.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { assertPodeAcessar } from '../access.js'
 import { HandoffUseCase } from '../handoff.use-case.js'
 import { ReadConversationUseCase } from '../read-conversation.use-case.js'
@@ -24,12 +25,7 @@ const handoff = new HandoffUseCase(prisma, conversas, {
 
 const cliente = (id: string): TokenSubject => ({ subjectId: id, kind: 'CUSTOMER' })
 
-beforeEach(async () => {
-  await prisma.offerInsight.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -63,7 +59,7 @@ test('atendente nao e barrado por esta regra', () => {
 // ---------- as tres portas ----------
 
 async function conversaDaMaria() {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = await criarCliente()
   const c = await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE' })
   await conversas.update(c.id, { customerId: maria.id })
   return { id: c.id, mariaId: maria.id }

@@ -8,6 +8,7 @@ import {
 } from '../../context/index.js'
 import { IdentityService } from '../../identity/identity.service.js'
 import { RuleClassifier } from '../../nlp/rule-classifier.js'
+import { criarAtendente, criarClienteDoCenario, limparBase } from '../../testing/fixtures.js'
 import { HandoffUseCase } from '../handoff.use-case.js'
 import { ConversationOrchestrator } from '../orchestrator.js'
 
@@ -27,11 +28,7 @@ function entrada(text: string, extra: Partial<InboundMessage> = {}): InboundMess
   return { channel: 'SITE', text, receivedAt: new Date(), ...extra }
 }
 
-beforeEach(async () => {
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -50,7 +47,7 @@ test('mensagem anônima cria conversa e pede identificação', async () => {
 })
 
 test('cliente autenticado recebe resposta contextualizada sem pedir CPF', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
   const r = await orquestrador.handle(
     entrada('minha internet está caindo', { customerId: maria.id }),
   )
@@ -74,7 +71,7 @@ test('as duas mensagens ficam gravadas na ordem certa', async () => {
 })
 
 test('cancelamento marca a conversa como aguardando humano', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
   const r = await orquestrador.handle(entrada('quero cancelar meu plano', { customerId: maria.id }))
   expect(r.success).toBe(true)
   if (!r.success) return
@@ -87,7 +84,7 @@ test('cancelamento marca a conversa como aguardando humano', async () => {
 })
 
 test('a segunda mensagem continua na mesma conversa do cliente', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const primeira = await orquestrador.handle(
     entrada('minha internet está caindo', { customerId: maria.id }),
@@ -104,6 +101,9 @@ test('a segunda mensagem continua na mesma conversa do cliente', async () => {
 })
 
 test('CPF informado no texto identifica o cliente na mesma mensagem', async () => {
+  // O CPF do texto precisa existir no banco, senao nao ha quem identificar.
+  await criarClienteDoCenario()
+
   const r = await orquestrador.handle(entrada('meu cpf é 123.456.789-00, quero ver meu plano'))
   if (!r.success) throw new Error('falhou')
 
@@ -113,7 +113,7 @@ test('CPF informado no texto identifica o cliente na mesma mensagem', async () =
 })
 
 test('duas mensagens desconhecidas seguidas escalam', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const primeira = await orquestrador.handle(entrada('bom dia', { customerId: maria.id }))
   if (!primeira.success) throw new Error('falhou')
@@ -127,6 +127,11 @@ test('duas mensagens desconhecidas seguidas escalam', async () => {
 test('RF005: o cliente identificado numa mensagem não é perguntado de novo na seguinte', async () => {
   // Cenário real: cliente anônimo informa o CPF, e na mensagem seguinte pede a
   // fatura sem repetir nada. O contexto tem que vir da conversa, não da mensagem.
+  //
+  // A data do vencimento vem daqui, e não de uma base semeada: assim o valor
+  // esperado logo abaixo tem uma origem visível no próprio teste.
+  await criarClienteDoCenario({ fatura: { dueDate: new Date('2026-05-20T12:00:00.000Z') } })
+
   const primeira = await orquestrador.handle(entrada('meu cpf é 123.456.789-00'))
   if (!primeira.success) throw new Error('falhou')
 
@@ -143,7 +148,7 @@ test('RF005: o cliente identificado numa mensagem não é perguntado de novo na 
 })
 
 test('a resposta carrega o contexto conhecido, para a interface mostrar', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
   const r = await orquestrador.handle(
     entrada('minha internet está caindo', { customerId: maria.id }),
   )
@@ -225,7 +230,7 @@ test('o telefone da primeira mensagem do WhatsApp fica gravado na conversa', asy
 })
 
 test('depois de escalar, o bot para de responder', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const escalou = await orquestrador.handle(
     entrada('quero cancelar meu plano', { customerId: maria.id }),
@@ -243,8 +248,8 @@ test('depois de escalar, o bot para de responder', async () => {
 })
 
 test('com o atendente na conversa o bot nao escreve nem uma vez', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
-  const bruno = await prisma.agent.findFirstOrThrow({ where: { email: 'bruno@claro.com.br' } })
+  const maria = (await criarClienteDoCenario()).cliente
+  const bruno = await criarAtendente({ name: 'Bruno Granado' })
 
   const escalou = await orquestrador.handle(
     entrada('quero falar com um atendente', { customerId: maria.id }),
@@ -283,7 +288,7 @@ test('com o atendente na conversa o bot nao escreve nem uma vez', async () => {
 })
 
 test('a mensagem do cliente continua registrada para o atendente ver', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const escalou = await orquestrador.handle(
     entrada('quero cancelar meu plano', { customerId: maria.id }),
@@ -298,7 +303,7 @@ test('a mensagem do cliente continua registrada para o atendente ver', async () 
 })
 
 test('o assunto nao muda depois de escalar', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const escalou = await orquestrador.handle(
     entrada('quero cancelar meu plano', { customerId: maria.id }),
@@ -329,7 +334,7 @@ test('CENARIO 1: site, handoff, WhatsApp, uma conversa so', async () => {
     handoff,
   )
 
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
 
   const noSite = await comHandoff.handle(
     entrada('minha internet esta caindo', { customerId: maria.id }),

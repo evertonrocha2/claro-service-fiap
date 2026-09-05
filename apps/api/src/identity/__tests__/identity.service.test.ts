@@ -2,15 +2,15 @@ import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaConversationRepository } from '../../context/conversation.repository.js'
 import { PrismaCustomerRepository } from '../../context/customer.repository.js'
+import { criarClienteDoCenario, limparBase } from '../../testing/fixtures.js'
 import { IdentityService } from '../identity.service.js'
 
 const conversas = new PrismaConversationRepository(prisma)
 const servico = new IdentityService(new PrismaCustomerRepository(prisma), conversas)
 
 beforeEach(async () => {
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
+  await limparBase()
+  await criarClienteDoCenario()
 })
 
 afterAll(async () => {

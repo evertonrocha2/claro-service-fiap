@@ -12,6 +12,9 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const AGENTE_EMAIL = process.env.SHOT_AGENTE ?? 'bruno@claro.com.br'
+const GESTOR_EMAIL = process.env.SHOT_GESTOR ?? 'leticia@claro.com.br'
+const AGENTE_SENHA = process.env.SHOT_AGENTE_SENHA ?? 'Atendente123'
 const PORT = 9335
 const OUT = process.argv[2] ?? 'screenshots/whatsapp'
 const W = 480
@@ -92,8 +95,8 @@ const api = async (caminho, corpo, token) =>
 async function main() {
   // O atendente entra primeiro porque a limpeza tambem passa por ele.
   const login = await api('/api/auth/agent/login', {
-    email: 'bruno@claro.com.br',
-    password: 'Atendente123',
+    email: AGENTE_EMAIL,
+    password: AGENTE_SENHA,
   })
 
   // Encerra o que sobrou de execucoes anteriores.

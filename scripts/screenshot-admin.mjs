@@ -14,6 +14,9 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const AGENTE_EMAIL = process.env.SHOT_AGENTE ?? 'bruno@claro.com.br'
+const GESTOR_EMAIL = process.env.SHOT_GESTOR ?? 'leticia@claro.com.br'
+const AGENTE_SENHA = process.env.SHOT_AGENTE_SENHA ?? 'Atendente123'
 const PORT = 9334
 const SITE = 'http://localhost:5174'
 const OUT = process.argv[2] ?? 'screenshots/admin'
@@ -128,9 +131,9 @@ async function main() {
   console.log('capturando:')
   await cdp.shot('1-login')
 
-  const usuario = process.env.SHOT_MANAGER === '1' ? 'leticia@claro.com.br' : 'bruno@claro.com.br'
+  const usuario = process.env.SHOT_MANAGER === '1' ? GESTOR_EMAIL : AGENTE_EMAIL
   await cdp.eval(PREENCHER('input[type=email]', usuario))
-  await cdp.eval(PREENCHER('input[type=password]', 'Atendente123'))
+  await cdp.eval(PREENCHER('input[type=password]', AGENTE_SENHA))
   await cdp.eval(CLICAR('Entrar'))
   await sleep(2500)
   await cdp.shot('2-quadro')

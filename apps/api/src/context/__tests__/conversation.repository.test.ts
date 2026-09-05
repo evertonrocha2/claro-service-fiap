@@ -1,5 +1,6 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { PrismaConversationRepository } from '../conversation.repository.js'
 import { PrismaMessageRepository } from '../message.repository.js'
 import { generateProtocol } from '../protocol.js'
@@ -7,11 +8,7 @@ import { generateProtocol } from '../protocol.js'
 const conversas = new PrismaConversationRepository(prisma)
 const mensagens = new PrismaMessageRepository(prisma)
 
-beforeEach(async () => {
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -30,7 +27,7 @@ test('cria conversa com protocolo único e status inicial BOT', async () => {
 })
 
 test('encontra a conversa aberta do cliente e ignora as resolvidas', async () => {
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const cliente = await criarCliente()
 
   const resolvida = await conversas.create({
     originChannel: 'SITE',

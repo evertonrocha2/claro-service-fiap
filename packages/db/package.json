@@ -5,8 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "migrate": "node scripts/prisma.mjs migrate dev",
-    "seed": "tsx prisma/seed.ts",
     "generate": "node scripts/prisma.mjs generate",
+    "agent": "tsx scripts/create-agent.mjs",
     "prisma": "node scripts/prisma.mjs"
   },
   "type": "module",

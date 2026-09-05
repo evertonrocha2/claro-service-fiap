@@ -1,18 +1,19 @@
 import { prisma } from '@sync/db'
 import request from 'supertest'
 import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
+import { criarAtendente, limparBase } from '../../testing/fixtures.js'
 import { createApp } from '../app.js'
 import { buildContainer } from '../container.js'
 
 const app = createApp(buildContainer())
 
+const SENHA = 'Atendente123'
+
 type Sessao = { token: string; agentId: string; auth: { Authorization: string } }
 
-/** Bruno é AGENT, Leticia é MANAGER. Ambos vêm do seed. */
+/** Bruno é AGENT, Leticia é MANAGER, e os dois nascem no beforeAll abaixo. */
 async function entrar(email: string): Promise<Sessao> {
-  const r = await request(app)
-    .post('/api/auth/agent/login')
-    .send({ email, password: 'Atendente123' })
+  const r = await request(app).post('/api/auth/agent/login').send({ email, password: SENHA })
 
   if (!r.body?.agent) {
     throw new Error(`login de ${email} falhou: ${r.status} ${JSON.stringify(r.body)}`)
@@ -36,6 +37,23 @@ let bruno: Sessao
 let leticia: Sessao
 
 beforeAll(async () => {
+  // A equipe deste arquivo e criada aqui: um atendimento, uma gestao e um
+  // terceiro que um teste remove para verificar a perda de acesso.
+  await limparBase()
+  await criarAtendente({ name: 'Bruno Granado', email: 'bruno@claro.com.br', password: SENHA })
+  await criarAtendente({
+    name: 'Leticia Vitalino',
+    email: 'leticia@claro.com.br',
+    password: SENHA,
+    role: 'MANAGER',
+  })
+  await criarAtendente({
+    name: 'Gustavo Ressurreicao',
+    email: 'gustavo@claro.com.br',
+    password: SENHA,
+  })
+  await criarAtendente({ name: 'Isaac Destro', email: 'isaac@claro.com.br', password: SENHA })
+
   bruno = await entrar('bruno@claro.com.br')
   leticia = await entrar('leticia@claro.com.br')
 })

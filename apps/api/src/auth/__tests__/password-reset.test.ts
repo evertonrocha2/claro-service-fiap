@@ -1,6 +1,7 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaCustomerRepository } from '../../context/index.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { hashPassword, verifyPassword } from '../password.js'
 import {
   generateResetCode,
@@ -17,25 +18,19 @@ const caso = new PasswordResetUseCase(prisma, clientes, refreshTokens, false)
 const emProducao = new PasswordResetUseCase(prisma, clientes, refreshTokens, true)
 
 const CPF = '12345678900'
-const EMAIL = 'maria.silva@exemplo.com'
+const EMAIL = 'maria.silva@teste.local'
 
 async function maria() {
   return prisma.customer.findUniqueOrThrow({ where: { cpf: CPF } })
 }
 
+// Recuperar so faz sentido para quem ja tem senha, entao a conta nasce com uma.
 beforeEach(async () => {
-  await prisma.passwordResetToken.deleteMany()
-  await prisma.refreshToken.deleteMany()
-  // A Maria comeca com senha definida: recuperar so faz sentido para quem tem uma.
-  await prisma.customer.update({
-    where: { cpf: CPF },
-    data: { passwordHash: await hashPassword('SenhaAntiga123') },
-  })
+  await limparBase()
+  await criarCliente({ cpf: CPF, email: EMAIL, name: 'Maria Silva', password: 'SenhaAntiga123' })
 })
 
 afterAll(async () => {
-  await prisma.customer.update({ where: { cpf: CPF }, data: { passwordHash: null } })
-  await prisma.passwordResetToken.deleteMany()
   await prisma.$disconnect()
 })
 
@@ -56,7 +51,7 @@ test('o codigo nao repete', () => {
 // ---------- pedido ----------
 
 test('cria o codigo quando CPF e e-mail conferem', async () => {
-  const r = await caso.request({ cpf: '123.456.789-00', email: 'Maria.Silva@Exemplo.com' })
+  const r = await caso.request({ cpf: '123.456.789-00', email: EMAIL.toUpperCase() })
 
   expect(r.success).toBe(true)
   if (!r.success) return

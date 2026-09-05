@@ -1,10 +1,14 @@
 import { prisma } from '@sync/db'
-import { afterAll, beforeAll, beforeEach, expect, test } from 'vitest'
+import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaCustomerRepository } from '../../context/customer.repository.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { LoginUseCase } from '../login.use-case.js'
 import { hashPassword } from '../password.js'
 import { PrismaRefreshTokenRepository } from '../refresh-token.repository.js'
 import { TokenService } from '../tokens.js'
+
+const EMAIL = 'maria.silva@teste.local'
+const SENHA = 'MinhaSenha123'
 
 const tokens = new TokenService('segredo-de-teste-com-mais-de-32-caracteres')
 const caso = new LoginUseCase(
@@ -13,15 +17,9 @@ const caso = new LoginUseCase(
   tokens,
 )
 
-beforeAll(async () => {
-  await prisma.customer.update({
-    where: { cpf: '12345678900' },
-    data: { passwordHash: await hashPassword('MinhaSenha123') },
-  })
-})
-
 beforeEach(async () => {
-  await prisma.refreshToken.deleteMany()
+  await limparBase()
+  await criarCliente({ cpf: '12345678900', name: 'Maria Silva', email: EMAIL, password: SENHA })
 })
 
 afterAll(async () => {
@@ -29,7 +27,7 @@ afterAll(async () => {
 })
 
 test('login válido devolve access e refresh', async () => {
-  const r = await caso.execute({ email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' })
+  const r = await caso.execute({ email: EMAIL, password: SENHA })
   expect(r.success).toBe(true)
   if (!r.success) return
 
@@ -39,7 +37,7 @@ test('login válido devolve access e refresh', async () => {
 })
 
 test('o access token carrega o id do cliente', async () => {
-  const r = await caso.execute({ email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' })
+  const r = await caso.execute({ email: EMAIL, password: SENHA })
   if (!r.success) throw new Error('falhou')
 
   const verificado = await tokens.verifyAccess(r.data.accessToken)
@@ -48,19 +46,19 @@ test('o access token carrega o id do cliente', async () => {
 })
 
 test('a resposta nunca inclui o hash da senha', async () => {
-  const r = await caso.execute({ email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' })
+  const r = await caso.execute({ email: EMAIL, password: SENHA })
   if (!r.success) throw new Error('falhou')
   expect(JSON.stringify(r.data)).not.toContain('$argon2id$')
 })
 
 test('senha errada e e-mail inexistente dão exatamente o mesmo erro', async () => {
   const senhaErrada = await caso.execute({
-    email: 'maria.silva@exemplo.com',
+    email: EMAIL,
     password: 'ErradaTotal',
   })
   const emailInexistente = await caso.execute({
     email: 'ninguem@exemplo.com',
-    password: 'MinhaSenha123',
+    password: SENHA,
   })
 
   expect(senhaErrada.success).toBe(false)
@@ -73,16 +71,18 @@ test('senha errada e e-mail inexistente dão exatamente o mesmo erro', async () 
 })
 
 test('quem ainda não fez o primeiro acesso não consegue logar', async () => {
-  await prisma.customer.update({ where: { cpf: '98765432100' }, data: { passwordHash: null } })
-  const r = await caso.execute({ email: 'joao.pereira@exemplo.com', password: 'QualquerCoisa1' })
+  // Cliente da base sem senha definida: existe, mas ainda nao pode entrar.
+  const semSenha = await criarCliente({ name: 'João Pereira' })
+
+  const r = await caso.execute({ email: semSenha.email, password: 'QualquerCoisa1' })
   expect(r.success).toBe(false)
   if (r.success) return
   expect(r.error.code).toBe('CREDENCIAIS_INVALIDAS')
 })
 
 test('cada login abre uma família de refresh diferente', async () => {
-  const a = await caso.execute({ email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' })
-  const b = await caso.execute({ email: 'maria.silva@exemplo.com', password: 'MinhaSenha123' })
+  const a = await caso.execute({ email: EMAIL, password: SENHA })
+  const b = await caso.execute({ email: EMAIL, password: SENHA })
   if (!a.success || !b.success) throw new Error('falhou')
 
   const repo = new PrismaRefreshTokenRepository(prisma)

@@ -1,16 +1,20 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaCustomerRepository } from '../../context/customer.repository.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { FirstAccessUseCase } from '../first-access.use-case.js'
 import { verifyPassword } from '../password.js'
 
 const caso = new FirstAccessUseCase(new PrismaCustomerRepository(prisma))
 
+const CPF = '12345678900'
+const EMAIL = 'maria.silva@teste.local'
+
+// O primeiro acesso so faz sentido para uma conta que ainda nao tem senha,
+// entao o cliente nasce sem hash a cada teste.
 beforeEach(async () => {
-  await prisma.customer.update({
-    where: { cpf: '12345678900' },
-    data: { passwordHash: null },
-  })
+  await limparBase()
+  await criarCliente({ cpf: CPF, email: EMAIL, name: 'Maria Silva' })
 })
 
 afterAll(async () => {
@@ -20,12 +24,12 @@ afterAll(async () => {
 test('define a senha quando CPF e e-mail batem com um cadastro existente', async () => {
   const r = await caso.execute({
     cpf: '123.456.789-00',
-    email: 'maria.silva@exemplo.com',
+    email: EMAIL,
     password: 'MinhaSenha123',
   })
   expect(r.success).toBe(true)
 
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: CPF } })
   expect(cliente.passwordHash).not.toBeNull()
   expect(await verifyPassword(cliente.passwordHash ?? '', 'MinhaSenha123')).toBe(true)
 })
@@ -33,7 +37,7 @@ test('define a senha quando CPF e e-mail batem com um cadastro existente', async
 test('aceita CPF com ou sem formatação', async () => {
   const r = await caso.execute({
     cpf: '12345678900',
-    email: 'maria.silva@exemplo.com',
+    email: EMAIL,
     password: 'MinhaSenha123',
   })
   expect(r.success).toBe(true)
@@ -42,7 +46,7 @@ test('aceita CPF com ou sem formatação', async () => {
 test('o e-mail é comparado sem diferenciar caixa', async () => {
   const r = await caso.execute({
     cpf: '12345678900',
-    email: '  MARIA.SILVA@Exemplo.COM ',
+    email: `  ${EMAIL.toUpperCase()} `,
     password: 'MinhaSenha123',
   })
   expect(r.success).toBe(true)
@@ -73,7 +77,7 @@ test('e-mail que não bate com o CPF dá o mesmo erro genérico', async () => {
 test('senha curta demais é rejeitada', async () => {
   const r = await caso.execute({
     cpf: '12345678900',
-    email: 'maria.silva@exemplo.com',
+    email: EMAIL,
     password: 'curta',
   })
   expect(r.success).toBe(false)
@@ -84,7 +88,7 @@ test('senha curta demais é rejeitada', async () => {
 test('não deixa redefinir a senha de quem já fez o primeiro acesso', async () => {
   const dados = {
     cpf: '12345678900',
-    email: 'maria.silva@exemplo.com',
+    email: EMAIL,
     password: 'MinhaSenha123',
   }
   expect((await caso.execute(dados)).success).toBe(true)

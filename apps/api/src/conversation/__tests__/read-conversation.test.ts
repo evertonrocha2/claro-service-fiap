@@ -5,6 +5,7 @@ import {
   PrismaCustomerRepository,
   PrismaMessageRepository,
 } from '../../context/index.js'
+import { criarClienteDoCenario, limparBase } from '../../testing/fixtures.js'
 import { ReadConversationUseCase } from '../read-conversation.use-case.js'
 
 const conversas = new PrismaConversationRepository(prisma)
@@ -12,11 +13,7 @@ const mensagens = new PrismaMessageRepository(prisma)
 const clientes = new PrismaCustomerRepository(prisma)
 const caso = new ReadConversationUseCase(conversas, mensagens, clientes)
 
-beforeEach(async () => {
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -65,7 +62,7 @@ test('a sessao anonima nao perde a conversa quando o cliente se identifica', asy
   // Caminho previsto no RF002: conversa anonima, cliente informa o CPF no meio e
   // a conversa passa a ter dono. Exigir token do dono aqui apagava o historico
   // da tela de quem estava conversando, no instante seguinte.
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
   const c = await conversaAnonima()
 
   await conversas.update(c.id, { customerId: maria.id })
@@ -90,7 +87,7 @@ test('conversa inexistente devolve erro, não estoura', async () => {
 })
 
 test('o contexto vem junto, para a barra do site continuar preenchida', async () => {
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = (await criarClienteDoCenario()).cliente
   const c = await conversas.create({
     originChannel: 'SITE',
     currentChannel: 'SITE',

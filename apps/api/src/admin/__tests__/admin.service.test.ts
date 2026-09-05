@@ -1,14 +1,18 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaConversationRepository, PrismaMessageRepository } from '../../context/index.js'
+import { criarAtendente, criarCliente, limparBase } from '../../testing/fixtures.js'
 import { AdminService, maskCpf } from '../admin.service.js'
 
 const mensagens = new PrismaMessageRepository(prisma)
 const conversas = new PrismaConversationRepository(prisma)
 const admin = new AdminService(prisma, mensagens)
 
-async function conversaEsperando(intent: 'CANCELAMENTO' | 'PROBLEMA_TECNICO' = 'CANCELAMENTO') {
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+async function conversaEsperando(
+  intent: 'CANCELAMENTO' | 'PROBLEMA_TECNICO' = 'CANCELAMENTO',
+  dadosDoCliente: Parameters<typeof criarCliente>[0] = {},
+) {
+  const cliente = await criarCliente(dadosDoCliente)
   const c = await conversas.create({
     originChannel: 'SITE',
     currentChannel: 'SITE',
@@ -21,27 +25,15 @@ async function conversaEsperando(intent: 'CANCELAMENTO' | 'PROBLEMA_TECNICO' = '
     sender: 'CUSTOMER',
     text: 'preciso de ajuda',
   })
-  return conversas.update(c.id, { status: 'WAITING_HUMAN', intent })
+  const conversa = await conversas.update(c.id, { status: 'WAITING_HUMAN', intent })
+  return Object.assign(conversa, { cliente })
 }
 
 async function atendente() {
-  return prisma.agent.upsert({
-    where: { email: 'atendente.teste@exemplo.com' },
-    update: {},
-    create: {
-      name: 'Atendente de Teste',
-      email: 'atendente.teste@exemplo.com',
-      passwordHash: 'irrelevante-aqui',
-      role: 'AGENT',
-    },
-  })
+  return criarAtendente({ name: 'Atendente de Teste', role: 'AGENT' })
 }
 
-beforeEach(async () => {
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -53,12 +45,12 @@ test('o CPF nunca aparece inteiro para o atendente', () => {
 })
 
 test('a fila traz quem está esperando com o tempo de espera', async () => {
-  const c = await conversaEsperando()
+  const c = await conversaEsperando('CANCELAMENTO', { name: 'Maria Silva' })
   const fila = await admin.queue({}, new Date(c.updatedAt.getTime() + 90_000))
 
   expect(fila).toHaveLength(1)
   expect(fila[0]?.protocol).toBe(c.protocol)
-  expect(fila[0]?.customerName).toBe('Maria Silva')
+  expect(fila[0]?.customerName).toBe(c.cliente.name)
   expect(fila[0]?.waitingSeconds).toBeGreaterThanOrEqual(89)
   expect(fila[0]?.lastMessage).toBe('preciso de ajuda')
 })
@@ -78,7 +70,8 @@ test('filtra por intenção', async () => {
 })
 
 test('o detalhe traz o histórico e o CPF mascarado', async () => {
-  const c = await conversaEsperando()
+  // O CPF vem do proprio teste para a mascara esperada ter origem visivel.
+  const c = await conversaEsperando('CANCELAMENTO', { cpf: '12345678900' })
   const r = await admin.detail(c.id)
 
   expect(r.success).toBe(true)
@@ -143,7 +136,7 @@ test('depois de assumir, a resposta entra no histórico como AGENT', async () =>
 test('as métricas contam espera, intenção e troca de canal', async () => {
   await conversaEsperando('CANCELAMENTO')
 
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const cliente = await criarCliente()
   const trocou = await conversas.create({
     originChannel: 'SITE',
     currentChannel: 'SITE',
@@ -172,7 +165,7 @@ test('taxa de resolução automática conta só quem nunca passou por humano', a
 })
 
 test('o quadro mostra também as conversas que ainda estão com a IA', async () => {
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const cliente = await criarCliente()
   const c = await conversas.create({
     originChannel: 'SITE',
     currentChannel: 'SITE',
@@ -197,7 +190,7 @@ test('o quadro mostra também as conversas que ainda estão com a IA', async () 
 })
 
 test('o filtro de situação separa a fila humana da conversa com a IA', async () => {
-  const cliente = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const cliente = await criarCliente()
   await conversas.create({ originChannel: 'SITE', currentChannel: 'SITE', customerId: cliente.id })
   await conversaEsperando()
 

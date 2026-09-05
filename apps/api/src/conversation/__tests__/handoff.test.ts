@@ -1,6 +1,7 @@
 import { prisma } from '@sync/db'
 import { afterAll, beforeEach, expect, test } from 'vitest'
 import { PrismaConversationRepository } from '../../context/index.js'
+import { criarCliente, limparBase } from '../../testing/fixtures.js'
 import { extractHandoffCode, generateHandoffCode, HandoffUseCase } from '../handoff.use-case.js'
 
 const conversas = new PrismaConversationRepository(prisma)
@@ -15,12 +16,7 @@ const meta = new HandoffUseCase(prisma, conversas, {
   fromNumber: '5511999998888',
 })
 
-beforeEach(async () => {
-  await prisma.offerInsight.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -120,7 +116,7 @@ test('a sessao que informou o CPF continua podendo gerar o proprio link', async 
   // Cenario 1 do documento: conversa anonima, cliente informa o CPF e depois
   // quer continuar no WhatsApp. Exigir token do dono aqui tirava dele o direito
   // de gerar o link da propria conversa.
-  const maria = await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })
+  const maria = await criarCliente()
   const c = await anonima()
   await conversas.update(c.id, { customerId: maria.id })
 

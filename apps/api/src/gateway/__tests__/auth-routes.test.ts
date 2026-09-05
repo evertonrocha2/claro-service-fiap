@@ -1,6 +1,7 @@
 import { prisma } from '@sync/db'
 import request from 'supertest'
 import { afterAll, beforeEach, expect, test } from 'vitest'
+import { criarAtendente, criarClienteDoCenario, limparBase } from '../../testing/fixtures.js'
 import { createApp } from '../app.js'
 import { buildContainer } from '../container.js'
 
@@ -13,11 +14,16 @@ const CADASTRO = {
 }
 
 beforeEach(async () => {
-  await prisma.refreshToken.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-  await prisma.customer.update({ where: { cpf: '12345678900' }, data: { passwordHash: null } })
+  await limparBase()
+  await criarAtendente({
+    name: 'Bruno Granado',
+    email: 'bruno@claro.com.br',
+    password: 'Atendente123',
+  })
+  // Com servico e fatura: a resposta automatica cita o nome do plano, e sem ele
+  // o teste do RF002 nao teria o que verificar. O e-mail vem do proprio teste,
+  // porque e ele que o primeiro acesso vai confirmar.
+  await criarClienteDoCenario({ email: CADASTRO.email })
 })
 
 afterAll(async () => {

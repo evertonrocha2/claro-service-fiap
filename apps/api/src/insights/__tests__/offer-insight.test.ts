@@ -5,6 +5,7 @@ import {
   PrismaCustomerRepository,
   PrismaMessageRepository,
 } from '../../context/index.js'
+import { criarClienteDoCenario, limparBase } from '../../testing/fixtures.js'
 import {
   type CustomerProfile,
   GeminiOfferWriter,
@@ -32,12 +33,7 @@ function perfil(over: Partial<CustomerProfile> = {}): CustomerProfile {
   }
 }
 
-beforeEach(async () => {
-  await prisma.offerInsight.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -182,10 +178,11 @@ test('a chave vai no cabecalho, nunca na URL', async () => {
 // ---------- gravacao ----------
 
 async function cenarioCancelamento() {
-  const cliente = await clientes.findWithContext(
-    (await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })).id,
-  )
-  if (!cliente) throw new Error('cliente nao semeado')
+  // Fatura vencida de proposito: e ela que faz a regra escolher negociacao em
+  // vez de retencao, e o teste abaixo verifica exatamente essa escolha.
+  const criado = await criarClienteDoCenario({ fatura: { vencimentoEmDias: -107 } })
+  const cliente = await clientes.findWithContext(criado.cliente.id)
+  if (!cliente) throw new Error('cliente nao encontrado')
 
   const c = await conversas.create({
     originChannel: 'SITE',
@@ -266,9 +263,7 @@ test('modelo fora do ar nao apaga a sugestao das regras', async () => {
 
 test('atendimento inexistente devolve erro, nao estoura', async () => {
   const servico = new OfferInsightService(prisma, mensagens)
-  const cliente = await clientes.findWithContext(
-    (await prisma.customer.findUniqueOrThrow({ where: { cpf: '12345678900' } })).id,
-  )
+  const cliente = await clientes.findWithContext((await criarClienteDoCenario()).cliente.id)
   if (!cliente) throw new Error('cliente nao semeado')
 
   const r = await servico.generate(cliente, 'nao-existe')

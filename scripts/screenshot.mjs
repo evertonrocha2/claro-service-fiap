@@ -117,16 +117,16 @@ const CLICAR_TEXTO = (texto) => `
 })()`
 
 /**
- * Garante que a Maria tenha uma senha conhecida antes de capturar o login.
+ * Prepara a conta que o script vai usar para entrar.
  *
- * O banco e compartilhado com a suite de testes, e o teste de recuperacao
- * termina limpando o hash dela. Sem isto o script falhava no login e o motivo
- * ficava invisivel, parecendo bug do produto.
- *
- * Tenta primeiro acesso; se a conta ja tiver senha, usa a recuperacao. Nos dois
- * caminhos termina com a senha que o script usa em seguida.
+ * Nao existe mais base semeada: quem roda isto precisa ter criado o cliente
+ * antes, e diz qual e por variavel de ambiente. O script so garante que a conta
+ * tenha uma senha conhecida, tentando primeiro acesso e, se ja houver senha,
+ * recuperacao.
  */
-const SENHA_DEMO = 'MinhaSenha123'
+const CLIENTE_CPF = process.env.SHOT_CPF ?? '12345678900'
+const CLIENTE_EMAIL = process.env.SHOT_EMAIL ?? 'maria.silva@exemplo.com'
+const SENHA_DEMO = process.env.SHOT_SENHA ?? 'MinhaSenha123'
 
 async function garantirSenhaDaMaria() {
   const api = async (caminho, corpo) => {
@@ -138,7 +138,7 @@ async function garantirSenhaDaMaria() {
     return { ok: r.ok, body: await r.json().catch(() => null) }
   }
 
-  const dados = { cpf: '12345678900', email: 'maria.silva@exemplo.com' }
+  const dados = { cpf: CLIENTE_CPF, email: CLIENTE_EMAIL }
 
   const primeiro = await api('/api/auth/first-access', { ...dados, password: SENHA_DEMO })
   if (primeiro.ok) {
@@ -148,7 +148,12 @@ async function garantirSenhaDaMaria() {
 
   const pedido = await api('/api/auth/password-reset', dados)
   const code = pedido.body?.devCode
-  if (!code) throw new Error('nao consegui um codigo de recuperacao')
+  if (!code) {
+    throw new Error(
+      `Nao existe cliente com CPF ${CLIENTE_CPF} e e-mail ${CLIENTE_EMAIL}. ` +
+        'A base nao e mais semeada: crie o cliente antes, ou informe SHOT_CPF e SHOT_EMAIL.',
+    )
+  }
 
   const trocou = await api('/api/auth/password-reset/confirm', { code, password: SENHA_DEMO })
   if (!trocou.ok) throw new Error('nao consegui redefinir a senha da Maria')
@@ -184,7 +189,7 @@ async function main() {
   console.log('capturando:')
   await cdp.shot('1-login')
 
-  await cdp.eval(PREENCHER('input[type=email]', 'maria.silva@exemplo.com'))
+  await cdp.eval(PREENCHER('input[type=email]', CLIENTE_EMAIL))
   await cdp.eval(PREENCHER('input[type=password]', SENHA_DEMO))
   await sleep(200)
   await cdp.shot('2-login-preenchido')
@@ -232,8 +237,8 @@ async function main() {
   await sleep(2500)
   await cdp.eval(CLICAR_TEXTO('Esqueci minha senha'))
   await sleep(600)
-  await cdp.eval(PREENCHER('input[inputmode=numeric]', '123.456.789-00'))
-  await cdp.eval(PREENCHER('input[type=email]', 'maria.silva@exemplo.com'))
+  await cdp.eval(PREENCHER('input[inputmode=numeric]', CLIENTE_CPF))
+  await cdp.eval(PREENCHER('input[type=email]', CLIENTE_EMAIL))
   await sleep(200)
   await cdp.shot('8-recuperar-pedido')
 

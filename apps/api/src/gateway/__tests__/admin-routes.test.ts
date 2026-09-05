@@ -1,10 +1,23 @@
 import { prisma } from '@sync/db'
 import request from 'supertest'
 import { afterAll, beforeEach, expect, test } from 'vitest'
+import { criarAtendente, criarCliente, limparBase } from '../../testing/fixtures.js'
 import { createApp } from '../app.js'
 import { buildContainer } from '../container.js'
 
 const app = createApp(buildContainer())
+
+// As contas sao criadas pelo proprio teste. Os e-mails sao literais que este
+// arquivo escolhe, nao linhas de uma base semeada em outro lugar.
+beforeEach(async () => {
+  await limparBase()
+  await criarAtendente({
+    name: 'Bruno Granado',
+    email: 'bruno@claro.com.br',
+    password: 'Atendente123',
+  })
+  await criarCliente({ cpf: '12345678900', name: 'Maria Silva', email: 'maria.silva@exemplo.com' })
+})
 
 async function tokenDeAtendente() {
   const r = await request(app)

@@ -45,7 +45,6 @@ Requires Node 24 and Docker.
 npm install
 npm run db:up        # MySQL 8 on port 3307
 npm run db:migrate
-npm run db:seed
 ```
 
 Copy `.env.example` to `.env`. `GEMINI_API_KEY` is optional: without it the
@@ -60,17 +59,26 @@ npm run dev:admin    # team console    http://localhost:5174
 npm run dev:zap      # WhatsApp mock   http://localhost:5175
 ```
 
-**Seeded logins**
+**The database starts empty.** There is no seed: no fake customers, no fake
+team. Create the first account for the console with
 
-| Where | Email | Password |
-|---|---|---|
-| Customer site | `maria.silva@exemplo.com` | first access with CPF `123.456.789-00` |
-| Team console | `bruno@claro.com.br` | `Atendente123` |
+```bash
+npm run db:agent -- "Nome Sobrenome" email@claro.com.br senha [MANAGER]
+```
+
+There is no sign-up for agents in the product, and there should not be: who
+gets into the console is decided by Claro, not by whoever opens the page. This
+command is the admin tool that stands in for that, until it is wired to a real
+identity directory.
+
+Customers are the other way around: the customer base belongs to Claro, so the
+product has first access rather than registration. Until that base is imported,
+insert a customer row yourself and use first access with its CPF and e-mail.
 
 ## Checks
 
 ```bash
-npm test         # 270 tests
+npm test         # 320 tests, each creating its own data
 npm run typecheck
 npm run lint
 ```
@@ -102,7 +110,7 @@ apps/
 packages/
   contracts/    enums, Result<T> and Zod schemas shared by API and front ends
   chat-ui/      chat components shared across channels
-  db/           Prisma schema, migrations, seed
+  db/           Prisma schema and migrations
 docs/superpowers/  design spec and implementation plan
 ```
 

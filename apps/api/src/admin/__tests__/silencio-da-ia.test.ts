@@ -9,6 +9,7 @@ import {
 import { ConversationOrchestrator } from '../../conversation/orchestrator.js'
 import { IdentityService } from '../../identity/identity.service.js'
 import { RuleClassifier } from '../../nlp/rule-classifier.js'
+import { criarAtendente, limparBase } from '../../testing/fixtures.js'
 import { AdminService } from '../admin.service.js'
 
 /**
@@ -46,24 +47,10 @@ function entrada(text: string, channel: Channel, conversationId?: string): Inbou
 }
 
 async function atendente() {
-  return prisma.agent.upsert({
-    where: { email: 'silencio.teste@exemplo.com' },
-    update: {},
-    create: {
-      name: 'Bruno Granado',
-      email: 'silencio.teste@exemplo.com',
-      passwordHash: 'irrelevante-aqui',
-      role: 'AGENT',
-    },
-  })
+  return criarAtendente({ name: 'Bruno Granado', role: 'AGENT' })
 }
 
-beforeEach(async () => {
-  await prisma.offerInsight.deleteMany()
-  await prisma.message.deleteMany()
-  await prisma.handoffToken.deleteMany()
-  await prisma.conversation.deleteMany()
-})
+beforeEach(limparBase)
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -197,16 +184,7 @@ test('nao repete o aviso quando a propria IA ja anunciou a transferencia', async
 
 test('dois atendentes nao assumem a mesma conversa', async () => {
   const bruno = await atendente()
-  const outro = await prisma.agent.upsert({
-    where: { email: 'outro.silencio@exemplo.com' },
-    update: {},
-    create: {
-      name: 'Outra Pessoa',
-      email: 'outro.silencio@exemplo.com',
-      passwordHash: 'irrelevante-aqui',
-      role: 'AGENT',
-    },
-  })
+  const outro = await criarAtendente({ name: 'Outra Pessoa', role: 'AGENT' })
 
   const primeira = await orquestrador.handle(
     entrada('minha internet esta caindo toda hora', 'SITE'),
