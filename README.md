@@ -60,20 +60,26 @@ npm run dev:zap      # WhatsApp mock   http://localhost:5175
 ```
 
 **The database starts empty.** There is no seed: no fake customers, no fake
-team. Create the first account for the console with
+team. Create accounts explicitly:
 
 ```bash
+npm run db:test          # once, creates the separate database the suite uses
 npm run db:agent -- "Nome Sobrenome" email@claro.com.br senha [MANAGER]
+npm run db:customer -- "Nome Sobrenome" 12345678900 email@exemplo.com +5511987654321
 ```
 
-There is no sign-up for agents in the product, and there should not be: who
-gets into the console is decided by Claro, not by whoever opens the page. This
-command is the admin tool that stands in for that, until it is wired to a real
-identity directory.
+`db:customer` creates the customer with one plan and one open invoice, because a
+customer with no service gives the assistant nothing to answer. The account is
+created without a password on purpose: that is what first access is for.
 
-Customers are the other way around: the customer base belongs to Claro, so the
-product has first access rather than registration. Until that base is imported,
-insert a customer row yourself and use first access with its CPF and e-mail.
+There is no sign-up for agents in the product, and there should not be: who
+gets into the console is decided by Claro, not by whoever opens the page. These
+commands are the admin tools that stand in for that, until they are wired to a
+real identity directory and to Claro's customer base.
+
+The suite runs against its own database, set by `TEST_DATABASE_URL`. It clears
+every table between tests, so pointing it at the development database would
+erase these accounts on every `npm test`.
 
 ## Checks
 

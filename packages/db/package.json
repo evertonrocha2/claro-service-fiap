@@ -7,6 +7,8 @@
     "migrate": "node scripts/prisma.mjs migrate dev",
     "generate": "node scripts/prisma.mjs generate",
     "agent": "tsx scripts/create-agent.mjs",
+    "customer": "tsx scripts/create-customer.mjs",
+    "test-db": "node scripts/test-db.mjs",
     "prisma": "node scripts/prisma.mjs"
   },
   "type": "module",

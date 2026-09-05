@@ -9,8 +9,9 @@ export default defineConfig({
     // Os testes de integração compartilham um único MySQL e limpam tabelas entre
     // si. Rodar arquivos em paralelo faria um teste apagar o estado do outro.
     fileParallelism: false,
-    // Base vazia antes e depois da suite. Sem seed, esse e o estado esperado do
-    // banco de desenvolvimento quando ninguem esta rodando teste.
+    // Banco separado do de desenvolvimento: sem isso, rodar a suite apagava as
+    // contas e as conversas da demonstracao, e nada avisava.
+    setupFiles: ['./vitest.setup.ts'],
     globalSetup: ['./vitest.global-setup.ts'],
   },
 })
